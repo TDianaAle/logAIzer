@@ -63,6 +63,7 @@ data/processed/splits/test.csv
 Output esempio:
 
 ✅ Dataset diviso in:
+
 - Train set: XXXXX righe salvato in data/processed/splits/train.csv
 - Test set: YYYY righe salvato in data/processed/splits/test.csv
 
