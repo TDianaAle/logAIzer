@@ -1,7 +1,6 @@
 ECHO attivo.
-# LogAIzer Project
+# LogAIzer
 
-Documentazione Tecnica – Progetto LogAIzer
 
 1. Dataset di partenza
 
