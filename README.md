@@ -1,4 +1,4 @@
-ECHO attivo.
+
 # LogAIzer
 
 
