@@ -89,3 +89,148 @@ Il dataset NSL-KDD, dopo la fase di analisi e preprocessing, risulta **pronto pe
 Le scelte metodologiche adottate (binaria vs multi-classe, preservazione outlier, scaling uniforme) sono state guidate dalla natura del problema di **Intrusion Detection**, dove l’obiettivo primario non è l’accuratezza globale, bensì la capacità di individuare **eventi rari e anomali**.  
 
 Questo lavoro costituisce la base solida per la fase successiva: sperimentazione di algoritmi di ML, confronto delle performance e costruzione del prototipo di IDS intelligente *logAIzer*.
+
+---------------
+
+# 🤖 logAIzer – Modulo Machine Learning
+
+Il modulo di Machine Learning di logAIzer implementa una pipeline per l’addestramento e la valutazione di modelli di classificazione sul dataset NSL-KDD, con l’obiettivo di sviluppare un sistema di Intrusion Detection (IDS) basato su tecniche di analisi dati e apprendimento automatico.
+
+ # 📂 Struttura del progetto
+src/
+│── dataloader.py      # Caricamento e preprocessing dei dati
+│── models.py          # Definizione dei modelli ML
+│── train.py           # Pipeline di training e validazione
+│── evaluate.py        # Metriche di valutazione e report
+config.json            # File di configurazione
+config_schema.json     # Schema JSON per validazione
+reports/               # Output di metriche e confusion matrix
+
+
+La struttura modulare rende il codice leggibile, estendibile e facilmente manutenibile, in linea con le best practice accademiche e industriali.
+
+# ⚙️ Configurazione
+
+Tutti i parametri sono definiti nel file config.json, validato tramite config_schema.json.
+Questo approccio garantisce flessibilità e riduce la possibilità di errori manuali.
+
+Esempio di config.json
+{
+  "data": {
+    "train_path": "data/nsl-kdd/KDDTrain+.TXT",
+    "test_path": "data/nsl-kdd/KDDTest+.TXT",
+    "binary": true
+  },
+  "models": {
+    "logistic_regression": {
+      "enabled": true,
+      "max_iter": 1000,
+      "class_weight": "balanced",
+      "solver": "lbfgs"
+    },
+    "random_forest": {
+      "enabled": true,
+      "n_estimators": 100,
+      "class_weight": "balanced",
+      "random_state": 42
+    }
+  },
+  "output": {
+    "reports_dir": "reports/"
+  }
+}
+
+ # 🧩 Componenti principali
+🔹 DataLoader (dataloader.py)
+
+Carica i dataset train/test.
+
+Esegue preprocessing:
+
+encoding delle variabili categoriche (protocol_type, service, flag),
+
+conversione etichetta binaria (normal = 0, attack = 1),
+
+standardizzazione delle feature numeriche.
+
+👉 Scopo: rendere i dati numerici e comparabili per i modelli ML.
+
+🔹 Modelli (models.py)
+
+Sono stati implementati due modelli baseline:
+
+Logistic Regression → modello lineare, semplice e interpretabile.
+
+Random Forest → modello non lineare, robusto a outlier e feature ridondanti.
+
+Entrambi utilizzano class_weight="balanced" per gestire lo sbilanciamento delle classi.
+
+🔹 Training (train.py)
+
+Carica configurazione da config.json.
+
+Esegue addestramento dei modelli abilitati.
+
+Valuta le performance sui dati di test.
+
+Integra il modulo evaluate.py per salvare i risultati.
+
+🔹 Valutazione (evaluate.py)
+
+Per ogni modello vengono generati:
+
+Classification report (precision, recall, f1-score, support) → salvato in JSON.
+
+Confusion matrix → salvata come PNG.
+
+# 📊 Metriche adottate
+
+Poiché il dataset è sbilanciato, l’accuracy non è sufficiente.
+Sono state privilegiate metriche più informative per un IDS:
+
+Precision → ridurre i falsi positivi.
+
+Recall → intercettare il maggior numero di attacchi (falsi negativi critici).
+
+F1-score → equilibrio tra precision e recall.
+
+Confusion matrix → visualizzazione immediata delle performance.
+
+# ▶️ Esecuzione
+
+Dopo aver installato le dipendenze:
+
+pip install -r requirements.txt
+
+
+lanciare il training con:
+
+python src/train.py --config config.json --schema config_schema.json
+
+ #📂 Output atteso
+
+Nella cartella reports/ vengono prodotti:
+
+lr_report.json → metriche Logistic Regression
+
+lr_cm.png → confusion matrix Logistic Regression
+
+rf_report.json → metriche Random Forest
+
+rf_cm.png → confusion matrix Random Forest
+
+# 🧭 Considerazioni finali
+
+La pipeline implementata è modulare, configurabile e riproducibile.
+
+Le scelte metodologiche (binary classification, scaling uniforme, gestione sbilanciamento) sono state guidate dalle caratteristiche del dataset e dalle esigenze di un IDS reale.
+
+Il modulo ML costituisce la base per sviluppi futuri, tra cui:
+
+testing di modelli più avanzati (XGBoost, Reti Neurali),
+
+applicazione di tecniche di bilanciamento (SMOTE, cost-sensitive learning),
+
+classificazione multi-classe per distinguere le diverse famiglie di attacco,
+
+integrazione con tecniche di early stopping e logging (TensorBoard).

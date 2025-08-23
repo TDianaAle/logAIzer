@@ -1,0 +1,28 @@
+{
+    "type": "object",
+    "properties": {
+        "data": {
+        "type": "object",
+        "properties": {
+            "train_path": { "type": "string" },
+            "test_path": { "type": "string" },
+            "binary": { "type": "boolean" }
+        },
+        "required": ["train_path", "test_path"]
+        },
+        "models": {
+        "type": "object",
+        "properties": {
+            "logistic_regression": { "type": "object" },
+            "random_forest": { "type": "object" }
+        }
+        },
+        "output": {
+        "type": "object",
+        "properties": {
+            "reports_dir": { "type": "string" }
+        }
+        }
+    },
+    "required": ["data", "models", "output"]
+}
