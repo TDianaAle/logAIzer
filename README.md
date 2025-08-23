@@ -98,6 +98,7 @@ Il modulo di Machine Learning di logAIzer implementa una pipeline per l’addest
 
  # 📂 Struttura del progetto
 src/
+
 │── dataloader.py      # Caricamento e preprocessing dei dati
 │── models.py          # Definizione dei modelli ML
 │── train.py           # Pipeline di training e validazione
