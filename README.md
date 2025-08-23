@@ -1,8 +1,14 @@
-# 📊 Analisi Dati – NSL-KDD Dataset
 
+
+# 📊 Analisi Dati – NSL-KDD Dataset
+ 
 L’attività di analisi esplorativa condotta sul dataset **NSL-KDD** ha avuto un duplice obiettivo:  
 1. fornire una comprensione approfondita della struttura e delle proprietà dei dati;  
 2. individuare le criticità e le trasformazioni necessarie affinché il dataset possa essere impiegato in modo efficace in modelli di *Machine Learning* per la realizzazione di un sistema di **Intrusion Detection (IDS)**.
+
+## ℹ️ Documentazione del dataset
+Per una descrizione dettagliata della struttura del dataset, delle feature e delle etichette disponibili, 
+si rimanda alla pagina [data/nsl-kdd/index.html](data/nsl-kdd/index.html).
 
 ---
 
