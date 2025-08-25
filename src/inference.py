@@ -18,7 +18,7 @@ def predict_instance(model, instance):
         "duration": 0, "protocol_type": "tcp", "service": "http", ...
     }
     """
-    # Creiamo un DataFrame con una sola riga
+
     df = pd.DataFrame([instance])
     dl = DataLoader(None, None)  # DataLoader per preprocessing
     X, _ = dl.preprocess(df, binary=True)
@@ -26,7 +26,7 @@ def predict_instance(model, instance):
     return "attack" if prediction == 1 else "normal"
 
 if __name__ == "__main__":
-    # Esempio di utilizzo
+
     model = load_model("reports/random_forest_model.joblib")
     
     example_instance = {
