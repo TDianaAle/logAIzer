@@ -2,7 +2,7 @@
 
 # 📊 Analisi Dati – NSL-KDD Dataset
  
-L’attività di analisi esplorativa condotta sul dataset **NSL-KDD** ha avuto un duplice obiettivo:  
+L’attività di analisi dati condotta sul dataset **NSL-KDD** ha avuto un duplice obiettivo:  
 1. fornire una comprensione approfondita della struttura e delle proprietà dei dati;  
 2. individuare le criticità e le trasformazioni necessarie affinché il dataset possa essere impiegato in modo efficace in modelli di *Machine Learning* per la realizzazione di un sistema di **Intrusion Detection (IDS)**.
 
@@ -11,6 +11,40 @@ Per una descrizione dettagliata della struttura del dataset, delle feature e del
 si rimanda alla pagina [data/nsl-kdd/index.html](data/nsl-kdd/index.html).
 
 ---
+## Tecnologie utilizzate
+
+# Pandas
+
+Libreria di riferimento in Python per la manipolazione e l’analisi di dataset tabellari,  utilizzata per il caricamento del dataset NSL-KDD, l’assegnazione dei nomi ufficiali delle colonne, l’esplorazione preliminare tramite metodi descrittivi (head(), shape(), describe()),
+ l’analisi della distribuzione delle classi (value_counts()).
+
+Grazie alla struttura dei DataFrame, Pandas consente di trattare i dati in modo analogo a una tabella relazionale, rendendo possibili operazioni complesse di filtraggio, raggruppamento e trasformazione con poche righe di codice.
+Nel contesto di un IDS, questo strumento ha permesso di passare dal dataset grezzo a una base dati strutturata e coerente, pronta per successive elaborazioni.
+
+# Matplotlib
+
+ Libreria base per la visualizzazione grafica in Python,
+ è stata utilizzata in combinazione con Seaborn per la generazione di grafici a barre (countplot), la rappresentazione di boxplot per individuare outlier e la costruzione di heatmap per l’analisi delle correlazioni tra variabili.
+
+# Seaborn
+
+Libreria di data visualization costruita su Matplotlib, con un orientamento specifico verso analisi statistiche, adottata per la necessità di ottenere grafici chiari, leggibili e ottimizzati per l’interpretazione dei dati.
+
+Le funzionalità impiegate includono grafici di distribuzione delle classi (countplot),
+
+boxplot per la rilevazione di valori anomali,
+
+heatmap della matrice di correlazione tra variabili numeriche.
+
+Rispetto a Matplotlib, Seaborn offre un livello di astrazione superiore che consente di focalizzarsi sull’analisi piuttosto che sulla configurazione estetica.
+In un IDS, strumenti di questo tipo supportano la comprensione immediata delle caratteristiche distintive tra traffico normale e malevolo.
+
+# Scikit-Learn
+
+Scikit-Learn (sklearn) è la libreria Python più diffusa per l’apprendimento automatico e nella fase di analisi dati è stata impiegata per l’encoding delle variabili categoriche (protocol_type, service, flag) mediante LabelEncoder, la trasformazione dell’etichetta target (normal/attack), e per la standardizzazione delle feature numeriche tramite StandardScaler.
+
+Questi passaggi di preprocessing hanno reso il dataset numericamente consistente e normalizzato, condizione indispensabile per addestrare modelli di Machine Learning.
+Senza tali trasformazioni, i modelli sarebbero stati soggetti a bias e instabilità dovute a scale eterogenee o a input non numerici.
 
 ## 1. Struttura e distribuzione delle classi
 L’analisi preliminare ha confermato che il dataset contiene **41 variabili descrittive**, di natura eterogenea (numeriche, categoriche, contatori, frequenze), e due colonne aggiuntive:  
@@ -115,6 +149,8 @@ Tutti i parametri sono definiti nel file config.json, validato tramite config_sc
 Questo approccio garantisce flessibilità e riduce la possibilità di errori manuali.
 
 Esempio di config.json
+
+``` json
 {
   "data": {
     "train_path": "data/nsl-kdd/KDDTrain+.TXT",
@@ -139,6 +175,7 @@ Esempio di config.json
     "reports_dir": "reports/"
   }
 }
+```
 
  # 🧩 Componenti principali
 🔹 DataLoader (dataloader.py)
