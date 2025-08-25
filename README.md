@@ -46,6 +46,15 @@ Scikit-Learn (sklearn) è la libreria Python più diffusa per l’apprendimento 
 Questi passaggi di preprocessing hanno reso il dataset numericamente consistente e normalizzato, condizione indispensabile per addestrare modelli di Machine Learning.
 Senza tali trasformazioni, i modelli sarebbero stati soggetti a bias e instabilità dovute a scale eterogenee o a input non numerici.
 
+# Random Forest
+
+La Random Forest è stata impiegata per analizzare il dataset e identificare le feature più rilevanti per distinguere traffico normale da attacchi.
+
+- Le variabili `src_bytes`, `dst_bytes`, `same_srv_rate`, `dst_host_srv_count` e `flag` si sono dimostrate tra le più discriminanti.  
+
+- L’analisi ha evidenziato che un sottoinsieme di **15–20 feature** è sufficiente a spiegare oltre il 70% della capacità predittiva del modello.  
+
+
 ## 1. Struttura e distribuzione delle classi
 L’analisi preliminare ha confermato che il dataset contiene **41 variabili descrittive**, di natura eterogenea (numeriche, categoriche, contatori, frequenze), e due colonne aggiuntive:  
 - `label` → etichetta multiclass che identifica traffico normale o tipologie specifiche di attacco (DoS, Probe, R2L, U2R).  
@@ -53,11 +62,9 @@ L’analisi preliminare ha confermato che il dataset contiene **41 variabili des
 
 La distribuzione delle classi risulta **fortemente sbilanciata**: alcune tipologie di attacco, come *neptune* e *smurf*, sono sovrarappresentate, mentre altre, quali *spy* o *perl*, compaiono in quantità marginali.  
 
-### Motivazione metodologica
 Lo sbilanciamento è un fenomeno noto nei dataset di sicurezza informatica: gli attacchi reali seguono tipicamente una distribuzione “long tail”, dove poche famiglie sono molto diffuse e molte altre sono rare.  
 In ambito di *data analysis*, è essenziale rilevare questo aspetto per evitare che i modelli di classificazione risultino **biased** verso le classi maggioritarie.  
 
-### Scelta progettuale
 In questa fase è stata introdotta un’etichetta **binaria** (`binary_label`: *normal* vs *attack*) al fine di ridurre la complessità del problema e focalizzarsi sull’obiettivo primario di un IDS: distinguere il traffico lecito da quello malevolo.  
 Tale approccio consente inoltre di ottenere valutazioni più stabili, rinviando a una fase successiva l’eventuale estensione al problema **multi-classe**.
 
@@ -66,11 +73,10 @@ Tale approccio consente inoltre di ottenere valutazioni più stabili, rinviando 
 ## 2. Statistiche descrittive delle variabili numeriche
 Le statistiche di base (medie, deviazioni standard, quartili) hanno mostrato valori con range molto estesi e presenza di numerosi **outlier**. Ad esempio, feature come `src_bytes` e `dst_bytes` presentano distribuzioni altamente asimmetriche, con valori eccezionalmente elevati in corrispondenza di specifiche istanze di attacco.
 
-### Motivazione metodologica
 In un contesto di sicurezza, gli outlier non rappresentano rumore da eliminare, bensì spesso corrispondono a **pattern anomali reali** (e.g., attacchi DoS caratterizzati da volumi di traffico anomali).  
 È quindi importante **preservarli** come indizi utili per la classificazione, ma al contempo ridurre gli effetti distorsivi delle scale diverse mediante tecniche di normalizzazione.
 
-### Scelta progettuale
+### Soluzione
 Si è optato per l’applicazione di uno **StandardScaler**, al fine di portare tutte le variabili numeriche su una scala comparabile (media = 0, deviazione standard = 1).  
 Ciò risulta particolarmente rilevante per algoritmi basati su distanze o gradienti, come regressione logistica, SVM o reti neurali.
 
@@ -80,17 +86,25 @@ Ciò risulta particolarmente rilevante per algoritmi basati su distanze o gradie
 La matrice di correlazione ha evidenziato la presenza di coppie di feature altamente collegate (e.g., `serror_rate` ↔ `srv_serror_rate`, `rerror_rate` ↔ `srv_rerror_rate`).  
 Questa ridondanza è tipica di dataset costruiti su metriche di rete, dove variabili derivate condividono l’informazione di base.
 
-### Motivazione metodologica
 Feature fortemente correlate possono determinare:  
 - inefficienza computazionale (modelli più complessi senza reale incremento informativo);  
 - rischio di *multicollinearità* in algoritmi parametrici (regressione, reti neurali), con conseguente perdita di interpretabilità.  
 
-### Possibili miglioramenti
-In prospettiva, sarà opportuno introdurre tecniche di **feature selection** (es. importanza delle feature in Random Forest, regressione L1) o **riduzione dimensionale** (es. PCA) per eliminare ridondanze preservando la capacità predittiva.
+---
+## 4. ## Feature Selection con Random Forest
+
+Per ridurre la ridondanza e identificare le variabili più rilevanti ai fini della classificazione, è stata applicata una **Feature Selection basata su Random Forest**.  
+Questa tecnica sfrutta l’importanza delle variabili (`feature importance`), calcolata come riduzione media dell’impurità ottenuta quando una feature viene utilizzata per effettuare split all’interno degli alberi.
+
+### Risultati principali
+- Le feature **più importanti** risultano essere `src_bytes`, `dst_bytes`, `same_srv_rate`, `dst_host_srv_count`, `dst_host_same_srv_rate` e `flag`.  
+  Queste variabili descrivono la quantità di traffico scambiato e le caratteristiche delle connessioni TCP/servizi, elementi chiave per individuare anomalie.  
+- Alcune feature, come `num_outbound_cmds`, `is_host_login` e `su_attempted`, hanno importanza trascurabile (< 0.001), indicando che possono essere eliminate senza perdita di accuratezza.  
+- La **curva cumulativa** mostra che le prime ~15–20 feature spiegano già oltre il **70–80% dell’importanza totale**, suggerendo che un sottoinsieme ristretto di variabili è sufficiente a mantenere buone performance del modello. 
 
 ---
 
-## 4. Preprocessing complessivo
+## 5. Preprocessing
 Le operazioni di preprocessing hanno incluso:  
 - encoding delle variabili categoriche (`protocol_type`, `service`, `flag`) → necessarie poiché gli algoritmi di ML richiedono input numerici;  
 - encoding binario della variabile target (`normal`=0, `attack`=1);  
@@ -101,36 +115,18 @@ Tali trasformazioni garantiscono che il dataset sia in una forma **consistente e
 
 ---
 
-# ✅ Sintesi critica
-L’analisi ha evidenziato i seguenti punti chiave:
-1. **Sbilanciamento marcato delle classi** → richiederà metriche adeguate (precision, recall, f1-score) e potenzialmente tecniche di riequilibrio (SMOTE, undersampling).  
-2. **Outlier informativi** → non eliminati, ma trattati tramite scaling.  
-3. **Ridondanza tra feature** → opportuno considerare future strategie di riduzione dimensionale.  
-4. **Preprocessing coerente** → encoding e scaling hanno reso i dati utilizzabili per algoritmi ML moderni.
 
----
-
-# 🔮 Prospettive di miglioramento
-- **Gestione dello sbilanciamento**: impiego di tecniche di *resampling* o approcci di *cost-sensitive learning*.  
-- **Analisi multi-classe**: estensione per distinguere le quattro categorie principali (DoS, Probe, R2L, U2R).  
-- **Feature engineering**: creazione di variabili derivate (es. rapporti tra `src_bytes` e `dst_bytes`, frequenze normalizzate).  
-- **Riduzione dimensionale**: eliminazione delle variabili fortemente correlate per migliorare robustezza ed efficienza.  
-
----
-
-## 📌 Conclusione finale
+##  Conclusione finale
 Il dataset NSL-KDD, dopo la fase di analisi e preprocessing, risulta **pronto per l’addestramento di modelli di Machine Learning**.  
 Le scelte metodologiche adottate (binaria vs multi-classe, preservazione outlier, scaling uniforme) sono state guidate dalla natura del problema di **Intrusion Detection**, dove l’obiettivo primario non è l’accuratezza globale, bensì la capacità di individuare **eventi rari e anomali**.  
 
-Questo lavoro costituisce la base solida per la fase successiva: sperimentazione di algoritmi di ML, confronto delle performance e costruzione del prototipo di IDS intelligente *logAIzer*.
-
 ---------------
 
-# 🤖 logAIzer – Modulo Machine Learning
+#  logAIzer – Modulo Machine Learning
 
 Il modulo di Machine Learning di logAIzer implementa una pipeline per l’addestramento e la valutazione di modelli di classificazione sul dataset NSL-KDD, con l’obiettivo di sviluppare un sistema di Intrusion Detection (IDS) basato su tecniche di analisi dati e apprendimento automatico.
 
- # 📂 Struttura del progetto
+ #  Struttura del progetto
 src/
 
 │── dataloader.py      # Caricamento e preprocessing dei dati
@@ -144,7 +140,7 @@ reports/               # Output di metriche e confusion matrix
 
 La struttura modulare rende il codice leggibile, estendibile e facilmente manutenibile, in linea con le best practice accademiche e industriali.
 
-# ⚙️ Configurazione
+#  Configurazione
 
 Tutti i parametri sono definiti nel file config.json, validato tramite config_schema.json.
 Questo approccio garantisce flessibilità e riduce la possibilità di errori manuali.
@@ -178,7 +174,7 @@ Esempio di config.json
 }
 ```
 
- # 🧩 Componenti principali
+ #  Componenti principali
 🔹 DataLoader (dataloader.py)
 
 Carica i dataset train/test.
@@ -191,7 +187,6 @@ conversione etichetta binaria (normal = 0, attack = 1),
 
 standardizzazione delle feature numeriche.
 
-👉 Scopo: rendere i dati numerici e comparabili per i modelli ML.
 
 🔹 Modelli (models.py)
 
@@ -221,7 +216,7 @@ Classification report (precision, recall, f1-score, support) → salvato in JSON
 
 Confusion matrix → salvata come PNG.
 
-# 📊 Metriche adottate
+#  Metriche adottate
 
 Poiché il dataset è sbilanciato, l’accuracy non è sufficiente.
 Sono state privilegiate metriche più informative per un IDS:
@@ -234,7 +229,7 @@ F1-score → equilibrio tra precision e recall.
 
 Confusion matrix → visualizzazione immediata delle performance.
 
-# ▶️ Esecuzione
+#  Esecuzione
 
 Dopo aver installato le dipendenze:
 
@@ -245,7 +240,7 @@ lanciare il training con:
 
 python src/train.py --config config.json --schema config_schema.json
 
- #📂 Output atteso
+ # Output atteso
 
 Nella cartella reports/ vengono prodotti:
 
@@ -257,7 +252,7 @@ rf_report.json → metriche Random Forest
 
 rf_cm.png → confusion matrix Random Forest
 
-# 🧭 Considerazioni finali
+#  Considerazioni finali
 
 La pipeline implementata è modulare, configurabile e riproducibile.
 
