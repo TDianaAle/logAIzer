@@ -1,8 +1,13 @@
+# src/dataloader.py
 import pandas as pd
+import joblib
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-def load_and_preprocess(train_path, test_path, features_to_keep=None):
-    # Colonne ufficiali
+def load_data(train_path, test_path, binary=True, features_file=None, top_k=None):
+    """
+    Carica e preprocessa il dataset NSL-KDD.
+    """
+    # Nomi delle colonne NSL-KDD
     columns = [
         "duration","protocol_type","service","flag","src_bytes","dst_bytes","land",
         "wrong_fragment","urgent","hot","num_failed_logins","logged_in","num_compromised",
@@ -15,34 +20,80 @@ def load_and_preprocess(train_path, test_path, features_to_keep=None):
         "dst_host_srv_rerror_rate","label","difficulty"
     ]
 
-    # Caricamento dati
+    # Caricamento dataset
     train = pd.read_csv(train_path, names=columns)
     test = pd.read_csv(test_path, names=columns)
 
-    # Target binario
-    for df in (train, test):
-        df["binary_label"] = df["label"].apply(lambda x: 0 if x == "normal" else 1)
+    # Etichetta binaria o multiclass
+    if binary:
+        train["binary_label"] = train["label"].apply(lambda x: 0 if x == "normal" else 1)
+        test["binary_label"] = test["label"].apply(lambda x: 0 if x == "normal" else 1)
+        target = "binary_label"
+    else:
+        target = "label"
 
     # Encoding categoriche
-    encoder = LabelEncoder()
+    encoders = {}
     for col in ["protocol_type", "service", "flag"]:
-        train[col] = encoder.fit_transform(train[col])
-        test[col] = encoder.transform(test[col])
+        le = LabelEncoder()
+        train[col] = le.fit_transform(train[col])
+        test[col] = le.transform(test[col])
+        encoders[col] = le
 
-    # X, y
-    X_train = train.drop(columns=["label", "difficulty", "binary_label"])
-    y_train = train["binary_label"]
-    X_test = test.drop(columns=["label", "difficulty", "binary_label"])
-    y_test = test["binary_label"]
+    # Selezione feature importanti se specificato
+    selected_features = None
+    if features_file is not None:
+        feat_df = pd.read_csv(features_file)
+        if top_k is not None:
+            selected_features = feat_df.head(top_k)["feature"].tolist()
+        else:
+            selected_features = feat_df["feature"].tolist()
 
-    # Selezione feature più importanti
-    if features_to_keep is not None:
-        X_train = X_train[features_to_keep]
-        X_test = X_test[features_to_keep]
+    drop_cols = ["label", "difficulty", target]
+    X_train = train.drop(columns=drop_cols)
+    X_test = test.drop(columns=drop_cols)
+
+    if selected_features:
+        X_train = X_train[selected_features]
+        X_test = X_test[selected_features]
+
+    y_train = train[target]
+    y_test = test[target]
 
     # Scaling
     scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
-    return X_train_scaled, X_test_scaled, y_train, y_test
+    # Salvataggio di encoder e scaler per l'inference
+    joblib.dump(encoders, "reports/encoders.joblib")
+    joblib.dump(scaler, "reports/scaler.joblib")
+
+    return X_train, y_train, X_test, y_test
+
+
+def preprocess_sample(
+    sample,
+    encoder_path="reports/encoders.joblib",
+    scaler_path="reports/scaler.joblib",
+    features=None
+):
+    """
+    Preprocessa un singolo campione (dict) per l'inference.
+    """
+    # Carica encoder e scaler
+    encoders = joblib.load(encoder_path)
+    scaler = joblib.load(scaler_path)
+
+    df = pd.DataFrame([sample])
+
+    # Encoding delle categoriche
+    for col in ["protocol_type", "service", "flag"]:
+        if col in df.columns and col in encoders:
+            df[col] = encoders[col].transform(df[col])
+
+    if features is not None:
+        df = df[features]
+
+    X = scaler.transform(df)
+    return X

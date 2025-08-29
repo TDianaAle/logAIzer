@@ -1,12 +1,12 @@
 
 
-# 📊 Analisi Dati – NSL-KDD Dataset
+# Analisi Dati – NSL-KDD Dataset
  
 L’attività di analisi dati condotta sul dataset **NSL-KDD** ha avuto un duplice obiettivo:  
 1. fornire una comprensione approfondita della struttura e delle proprietà dei dati;  
 2. individuare le criticità e le trasformazioni necessarie affinché il dataset possa essere impiegato in modo efficace in modelli di *Machine Learning* per la realizzazione di un sistema di **Intrusion Detection (IDS)**.
 
-## ℹ️ Documentazione del dataset
+## ℹDocumentazione del dataset
 Per una descrizione dettagliata della struttura del dataset, delle feature e delle etichette disponibili, 
 si rimanda alla pagina [data/nsl-kdd/index.html](data/nsl-kdd/index.html).
 
@@ -128,24 +128,19 @@ Il modulo di Machine Learning di logAIzer implementa una pipeline per l’addest
 
  #  Struttura del progetto
 src/
-
-│── dataloader.py      # Caricamento e preprocessing dei dati
-│── models.py          # Definizione dei modelli ML
-│── train.py           # Pipeline di training e validazione
-│── evaluate.py        # Metriche di valutazione e report
-config.json            # File di configurazione
-config_schema.json     # Schema JSON per validazione
-reports/               # Output di metriche e confusion matrix
-
-
-La struttura modulare rende il codice leggibile, estendibile e facilmente manutenibile, in linea con le best practice accademiche e industriali.
+│── dataloader.py # Caricamento, preprocessing e scaling dei dati
+│── models.py # Definizione e ottimizzazione dei modelli ML
+│── train.py # Pipeline di training, validazione e salvataggio
+│── inference.py # Predizioni su nuovi campioni
+config.json # File di configurazione
+config_schema.json # Schema JSON per validazione
+reports/ # Output di metriche, modelli e confusion matrix
 
 #  Configurazione
 
 Tutti i parametri sono definiti nel file config.json, validato tramite config_schema.json.
-Questo approccio garantisce flessibilità e riduce la possibilità di errori manuali.
 
-Esempio di config.json
+-Esempio di config.json
 
 ``` json
 {
@@ -181,89 +176,91 @@ Carica i dataset train/test.
 
 Esegue preprocessing:
 
-encoding delle variabili categoriche (protocol_type, service, flag),
+- encoding delle variabili categoriche (protocol_type, service, flag),
 
-conversione etichetta binaria (normal = 0, attack = 1),
+- conversione etichetta binaria (normal = 0, attack = 1),
 
-standardizzazione delle feature numeriche.
+- standardizzazione delle feature numeriche.
 
 
 🔹 Modelli (models.py)
 
 Sono stati implementati due modelli baseline:
 
-Logistic Regression → modello lineare, semplice e interpretabile.
+- Logistic Regression → modello lineare, semplice e interpretabile.
 
-Random Forest → modello non lineare, robusto a outlier e feature ridondanti.
+- Random Forest → modello non lineare, robusto a outlier e feature ridondanti.
 
-Entrambi utilizzano class_weight="balanced" per gestire lo sbilanciamento delle classi.
+- Entrambi utilizzano class_weight="balanced" per gestire lo sbilanciamento delle classi.
 
 🔹 Training (train.py)
 
-Carica configurazione da config.json.
+Esegue feature selection e addestramento sul dataset preprocessato.
 
-Esegue addestramento dei modelli abilitati.
+- Genera i report di classificazione in formato JSON.
 
-Valuta le performance sui dati di test.
+- Produce e salva confusion matrix in PNG.
 
-Integra il modulo evaluate.py per salvare i risultati.
+- Salva i modelli addestrati in reports/ (es. random_forest_model.joblib).
 
-🔹 Valutazione (evaluate.py)
+🔹Inference (inference.py)
 
-Per ogni modello vengono generati:
+- Permette di testare il modello addestrato su nuovi campioni.
 
-Classification report (precision, recall, f1-score, support) → salvato in JSON.
+- Input: file JSON con le stesse feature del dataset preprocessato (es. sample.json).
 
-Confusion matrix → salvata come PNG.
+- Applica la stessa pipeline di encoding e scaling usata in training.
+
+- Output: classificazione "Normal" o "Attack" direttamente in console (o integrabile in API REST).
 
 #  Metriche adottate
 
 Poiché il dataset è sbilanciato, l’accuracy non è sufficiente.
 Sono state privilegiate metriche più informative per un IDS:
 
-Precision → ridurre i falsi positivi.
+- Precision → ridurre i falsi positivi.
 
-Recall → intercettare il maggior numero di attacchi (falsi negativi critici).
+- Recall → intercettare il maggior numero di attacchi (falsi negativi critici).
 
-F1-score → equilibrio tra precision e recall.
+- F1-score → equilibrio tra precision e recall.
 
-Confusion matrix → visualizzazione immediata delle performance.
+- Confusion matrix → evidenzia visivamente il trade-off tra rilevazione e falsi allarmi.
 
 #  Esecuzione
 
-Dopo aver installato le dipendenze:
-
+- Dopo aver installato le dipendenze:
 pip install -r requirements.txt
 
-
-lanciare il training con:
-
+- Lanciare il training con:
 python src/train.py --config config.json --schema config_schema.json
 
- # Output atteso
+- Effettuare inferenza su un campione:
+python src/inference.py --sample sample.json
+
+ # Output
 
 Nella cartella reports/ vengono prodotti:
 
-lr_report.json → metriche Logistic Regression
+- lr_report.json → metriche Logistic Regression
 
-lr_cm.png → confusion matrix Logistic Regression
+- lr_cm.png → confusion matrix Logistic Regression
 
-rf_report.json → metriche Random Forest
+- rf_report.json → metriche Random Forest
 
-rf_cm.png → confusion matrix Random Forest
+- rf_cm.png → confusion matrix Random Forest
+
+
 
 #  Considerazioni finali
 
-La pipeline implementata è modulare, configurabile e riproducibile.
 
-Le scelte metodologiche (binary classification, scaling uniforme, gestione sbilanciamento) sono state guidate dalle caratteristiche del dataset e dalle esigenze di un IDS reale.
-
+-Le scelte metodologiche (binary classification, scaling uniforme, gestione sbilanciamento) sono state guidate dalle caratteristiche del dataset e dalle esigenze di un IDS reale.
 Il modulo ML costituisce la base per sviluppi futuri, tra cui:
 
-testing di modelli più avanzati (XGBoost, Reti Neurali),
+- testing di modelli più avanzati (XGBoost, Reti Neurali),
 
-applicazione di tecniche di bilanciamento (SMOTE, cost-sensitive learning),
+- applicazione di tecniche di bilanciamento (SMOTE, cost-sensitive learning),
 
-classificazione multi-classe per distinguere le diverse famiglie di attacco,
+- classificazione multi-classe per distinguere le diverse famiglie di attacco,
 
-integrazione con tecniche di early stopping e logging (TensorBoard).
+- integrazione con tecniche di early stopping e logging (TensorBoard).

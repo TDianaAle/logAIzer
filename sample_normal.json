@@ -1,0 +1,22 @@
+{
+    "src_bytes": 215,
+    "dst_bytes": 45076,
+    "same_srv_rate": 1.0,
+    "dst_host_srv_count": 9,
+    "dst_host_same_srv_rate": 1.0,
+    "flag": "SF",
+    "logged_in": 1,
+    "diff_srv_rate": 0.0,
+    "protocol_type": "tcp",
+    "count": 5,
+    "srv_serror_rate": 0.0,
+    "dst_host_diff_srv_rate": 0.0,
+    "service": "http",
+    "dst_host_same_src_port_rate": 1.0,
+    "serror_rate": 0.0,
+    "dst_host_srv_diff_host_rate": 0.0,
+    "srv_count": 5,
+    "dst_host_rerror_rate": 0.0,
+    "dst_host_count": 255,
+    "dst_host_serror_rate": 0.0
+}

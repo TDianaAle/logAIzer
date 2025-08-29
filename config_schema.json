@@ -1,4 +1,6 @@
 {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Config Schema",
     "type": "object",
     "properties": {
         "data": {
@@ -6,22 +8,44 @@
         "properties": {
             "train_path": { "type": "string" },
             "test_path": { "type": "string" },
-            "binary": { "type": "boolean" }
+            "binary": { "type": "boolean" },
+            "features_file": { "type": ["string", "null"] },
+            "top_k": { "type": ["integer", "null"], "minimum": 1 }
         },
-        "required": ["train_path", "test_path"]
+        "required": ["train_path", "test_path", "binary"]
         },
         "models": {
         "type": "object",
         "properties": {
-            "logistic_regression": { "type": "object" },
-            "random_forest": { "type": "object" }
+            "logistic_regression": {
+            "type": "object",
+            "properties": {
+                "enabled": { "type": "boolean" },
+                "max_iter": { "type": "integer" },
+                "class_weight": { "type": ["string", "null"] },
+                "solver": { "type": "string" },
+                "random_state": { "type": "integer" }
+            },
+            "required": ["enabled"]
+            },
+            "random_forest": {
+            "type": "object",
+            "properties": {
+                "enabled": { "type": "boolean" },
+                "n_estimators": { "type": "integer" },
+                "class_weight": { "type": ["string", "null"] },
+                "random_state": { "type": "integer" }
+            },
+            "required": ["enabled"]
+            }
         }
         },
         "output": {
         "type": "object",
         "properties": {
             "reports_dir": { "type": "string" }
-        }
+        },
+        "required": ["reports_dir"]
         }
     },
     "required": ["data", "models", "output"]

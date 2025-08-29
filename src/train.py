@@ -1,59 +1,84 @@
-# src/train.py
-
-import os
 import json
+import joblib
 import argparse
 import jsonschema
-import joblib   # <--- aggiunto per salvare il modello 
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-from dataloader import DataLoader
-from models import get_logistic_regression, get_random_forest
-from evaluate import generate_classification_report, plot_confusion_matrix
+from pathlib import Path
+from models import get_models
+from dataloader import load_data
+from sklearn.metrics import classification_report, confusion_matrix
 
+def save_report(report, model_name, reports_dir):
+    """Salva classification report in JSON"""
+    report_path = Path(reports_dir) / f"{model_name}_report.json"
+    with open(report_path, "w") as f:
+        json.dump(report, f, indent=4)
+    print(f"Report salvato in {report_path}")
 
-def save_model(model, path):
-    """Salva il modello addestrato in formato joblib"""
-    joblib.dump(model, path)
-    print(f"[INFO] Modello salvato in {path}")
+def save_confusion_matrix(y_true, y_pred, model_name, reports_dir):
+    """Salva confusion matrix come immagine PNG"""
+    cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(6,5))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+        xticklabels=["Normal","Attack"],
+        yticklabels=["Normal","Attack"])
+    plt.title(f"Confusion Matrix - {model_name}")
+    plt.ylabel("True label")
+    plt.xlabel("Predicted label")
 
+    cm_path = Path(reports_dir) / f"{model_name}_cm.png"
+    plt.savefig(cm_path)
+    plt.close()
+    print(f"Confusion matrix salvata in {cm_path}")
 
-def load_config(config_path="config.json", schema_path="config_schema.json"):
-    """Carica e valida la configurazione"""
-    with open(config_path) as f:
+def main(config_path, schema_path):
+    # Carica configurazione e schema
+    with open(config_path, "r") as f:
         config = json.load(f)
-    with open(schema_path) as f:
+    with open(schema_path, "r") as f:
         schema = json.load(f)
     jsonschema.validate(instance=config, schema=schema)
-    return config
 
+    data_cfg = config["data"]
+    output_cfg = config["output"]
 
-def run_training(config):
-    dl = DataLoader(config["data"]["train_path"], config["data"]["test_path"])
-    train, test = dl.load_data()
-    X_train, y_train = dl.preprocess(train, binary=config["data"]["binary"])
-    X_test, y_test = dl.preprocess(test, binary=config["data"]["binary"])
+    Path(output_cfg["reports_dir"]).mkdir(parents=True, exist_ok=True)
 
-    reports_dir = config["output"]["reports_dir"]
-    os.makedirs(reports_dir, exist_ok=True)
+    # Carica dati
+    X_train, y_train, X_test, y_test = load_data(
+        data_cfg["train_path"],
+        data_cfg["test_path"],
+        binary=data_cfg.get("binary", True),
+        features_file=data_cfg.get("features_file", None),
+        top_k=data_cfg.get("top_k", None)
+    )
 
-    # Logistic Regression
-    if config["models"]["logistic_regression"]["enabled"]:
-        params = {k: v for k, v in config["models"]["logistic_regression"].items() if k != "enabled"}
-        model = get_logistic_regression(params)
-        print("\n=== Training Logistic Regression ===")
+    # Ottiene modelli (passa X_train, y_train per RF ottimizzata)
+    models = get_models(X_train, y_train)
+
+    for name, model in models.items():
+        print(f"\n Addestramento modello: {name}")
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
-        generate_classification_report(y_test, y_pred, os.path.join(reports_dir, "lr_report.json"))
-        plot_confusion_matrix(y_test, y_pred, "Logistic Regression", os.path.join(reports_dir, "lr_cm.png"))
-        save_model(model, os.path.join(reports_dir, "logistic_regression_model.joblib"))
 
-    # Random Forest
-    if config["models"]["random_forest"]["enabled"]:
-        params = {k: v for k, v in config["models"]["random_forest"].items() if k != "enabled"}
-        model = get_random_forest(params)
-        print("\n=== Training Random Forest ===")
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        generate_classification_report(y_test, y_pred, os.path.join(reports_dir, "rf_report.json"))
-        plot_confusion_matrix(y_test, y_pred, "Random Forest", os.path.join(reports_dir, "rf_cm.png"))
-        save_model(model, os.path.join(reports_dir, "random_forest_model.joblib"))
+        # Report di classificazione
+        report = classification_report(y_test, y_pred, output_dict=True)
+        save_report(report, name, output_cfg["reports_dir"])
+
+        # Confusion matrix
+        save_confusion_matrix(y_test, y_pred, name, output_cfg["reports_dir"])
+
+        # Salvataggio modello
+        model_path = Path(output_cfg["reports_dir"]) / f"{name}_model.joblib"
+        joblib.dump(model, model_path)
+        print(f"Modello salvato in {model_path}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=str, required=True, help="Percorso file config.json")
+    parser.add_argument("--schema", type=str, required=True, help="Percorso file config_schema.json")
+    args = parser.parse_args()
+
+    main(args.config, args.schema)

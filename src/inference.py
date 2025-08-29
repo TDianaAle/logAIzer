@@ -1,50 +1,69 @@
-# src/inference.py
-
+import argparse
 import joblib
 import pandas as pd
-from dataloader import DataLoader
+import json
+from pathlib import Path
 
-def load_model(model_path):
-    """Carica un modello salvato"""
+
+def preprocess_sample(sample,
+    features_file="reports/feature_importance.csv",
+    top_k=20,
+    encoder_path="reports/encoders.joblib",
+    scaler_path="reports/scaler.joblib"):
+
+    """
+    Preprocessa un singolo sample nello stesso modo dei dati di training.
+    Tiene conto delle feature selezionate.
+    """
+    
+    encoders = joblib.load(encoder_path)
+    scaler = joblib.load(scaler_path)
+
+    df = pd.DataFrame([sample])
+
+    # Encoding categoriche
+    for col in ["protocol_type", "service", "flag"]:
+        if col in df.columns and col in encoders:
+            df[col] = encoders[col].transform(df[col])
+
+    # Carica feature selezionate
+    feat_df = pd.read_csv(features_file)
+    selected_features = feat_df.head(top_k)["feature"].tolist()
+
+    # Seleziona solo le feature usate in training
+    df = df[selected_features]
+
+    # Scaling
+    X = scaler.transform(df)
+    return X
+
+
+def main(sample_file):
+    model_path = Path("reports/random_forest_model.joblib")
+    if not model_path.exists():
+        raise FileNotFoundError(f" Modello non trovato: {model_path}. Esegui prima train.py")
+
+    # Carica modello
     model = joblib.load(model_path)
-    print(f"[INFO] Modello caricato da {model_path}")
-    return model
 
-def predict_instance(model, instance):
-    """
-    Predice la classe di una singola istanza (dizionario di feature).
-    Esempio instance:
-    {
-        "duration": 0, "protocol_type": "tcp", "service": "http", ...
-    }
-    """
+    # Carica sample da file JSON
+    with open(sample_file, "r") as f:
+        sample = json.load(f)
 
-    df = pd.DataFrame([instance])
-    dl = DataLoader(None, None)  # DataLoader per preprocessing
-    X, _ = dl.preprocess(df, binary=True)
+    # Preprocess sample
+    X = preprocess_sample(sample)
+
+    # Predizione
     prediction = model.predict(X)[0]
-    return "attack" if prediction == 1 else "normal"
+    label = "Normal" if prediction == 0 else "Attack"
+
+    print(f"Predizione per {sample_file}: {label}")
+
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sample", type=str, required=True,
+                        help="Percorso al file JSON contenente le feature del sample")
+    args = parser.parse_args()
 
-    model = load_model("reports/random_forest_model.joblib")
-    
-    example_instance = {
-        "duration": 0, "protocol_type": "tcp", "service": "http", "flag": "SF",
-        "src_bytes": 181, "dst_bytes": 5450, "land": 0, "wrong_fragment": 0,
-        "urgent": 0, "hot": 0, "num_failed_logins": 0, "logged_in": 1,
-        "num_compromised": 0, "root_shell": 0, "su_attempted": 0,
-        "num_root": 0, "num_file_creations": 0, "num_shells": 0,
-        "num_access_files": 0, "num_outbound_cmds": 0, "is_host_login": 0,
-        "is_guest_login": 0, "count": 2, "srv_count": 2, "serror_rate": 0.0,
-        "srv_serror_rate": 0.0, "rerror_rate": 0.0, "srv_rerror_rate": 0.0,
-        "same_srv_rate": 1.0, "diff_srv_rate": 0.0, "srv_diff_host_rate": 0.0,
-        "dst_host_count": 150, "dst_host_srv_count": 25, "dst_host_same_srv_rate": 0.17,
-        "dst_host_diff_srv_rate": 0.03, "dst_host_same_src_port_rate": 0.0,
-        "dst_host_srv_diff_host_rate": 0.0, "dst_host_serror_rate": 0.0,
-        "dst_host_srv_serror_rate": 0.0, "dst_host_rerror_rate": 0.05,
-        "dst_host_srv_rerror_rate": 0.0, "label": "normal", "difficulty": 1
-    }
-
-    prediction = predict_instance(model, example_instance)
-    print(f"Prediction: {prediction}")
+    main(args.sample)

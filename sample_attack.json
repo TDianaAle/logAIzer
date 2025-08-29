@@ -1,0 +1,22 @@
+{
+    "src_bytes": 0,
+    "dst_bytes": 0,
+    "same_srv_rate": 0.1,
+    "dst_host_srv_count": 2,
+    "dst_host_same_srv_rate": 0.2,
+    "flag": "S0",
+    "logged_in": 0,
+    "diff_srv_rate": 0.8,
+    "protocol_type": "tcp",
+    "count": 100,
+    "srv_serror_rate": 1.0,
+    "dst_host_diff_srv_rate": 0.7,
+    "service": "private",
+    "dst_host_same_src_port_rate": 0.05,
+    "serror_rate": 1.0,
+    "dst_host_srv_diff_host_rate": 0.5,
+    "srv_count": 50,
+    "dst_host_rerror_rate": 0.4,
+    "dst_host_count": 50,
+    "dst_host_serror_rate": 1.0
+}
