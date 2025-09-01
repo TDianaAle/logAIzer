@@ -249,18 +249,48 @@ Nella cartella reports/ vengono prodotti:
 
 - rf_cm.png → confusion matrix Random Forest
 
+ ## DEMO IDS
+
+L’addestramento su dataset statici, seppur fondamentale, non è sufficiente per dimostrare l’efficacia pratica di un IDS.
+
+In un contesto reale, il sistema deve essere in grado di:
+
+- traffico di rete in diretta,
+
+- estrarre in tempo reale le caratteristiche rilevanti,
+
+- classificarle tramite il modello di Machine Learning addestrato,
+
+- generare un alert immediato in caso di traffico sospetto.
+
+# Architettura
+
+Il modulo IDS implementato si compone di tre fasi principali:
+
+Packet Sniffing – tramite la libreria Scapy, il sistema cattura i pacchetti TCP su un’interfaccia di rete specificata (es. la porta 5173 della web app di test).
+
+Feature Extraction – ogni pacchetto viene trasformato in un insieme di feature derivate, coerenti con quelle utilizzate in NSL-KDD (es. IP sorgente/destinazione, porte, dimensione pacchetto, flag TCP). Questa fase permette di colmare il divario tra traffico reale e dataset sintetico.
+
+Classification – il vettore di feature viene preprocessato e inviato al modello Random Forest addestrato in precedenza. L’output (normal vs attack) viene immediatamente restituito.
+
+3. Funzionamento
+
+Il sistema opera in modalità streaming: ogni pacchetto intercettato genera un evento valutato dal modello.
+In console, il sistema mostra le feature del pacchetto per fornire trasparenza e tracciabilità e predizione del modello: “Normale” oppure “Attacco”.
+
+Questa logica consente di osservare, durante l’esecuzione di script benigni e malevoli (es. simulazioni di login legittimi o attacchi brute force), come il modello si comporti nel discriminare il traffico.
 
 
-#  Considerazioni finali
+5. Limiti e prospettive
 
+Le feature estratte non coprono ancora l’intero set di NSL-KDD,
 
--Le scelte metodologiche (binary classification, scaling uniforme, gestione sbilanciamento) sono state guidate dalle caratteristiche del dataset e dalle esigenze di un IDS reale.
-Il modulo ML costituisce la base per sviluppi futuri, tra cui:
+la classificazione è effettuata pacchetto per pacchetto, mentre in un IDS reale servono finestre temporali e correlazione multi-sessione, l’alert è mostrato solo in console.
 
-- testing di modelli più avanzati (XGBoost, Reti Neurali),
+Tuttavia, questo prototipo costituisce una base solida per sviluppi futuri:
 
-- applicazione di tecniche di bilanciamento (SMOTE, cost-sensitive learning),
+integrazione in un servizio REST (FastAPI) per ricevere traffico preprocessato da altri moduli,
 
-- classificazione multi-classe per distinguere le diverse famiglie di attacco,
+estensione ad analisi multi-classe per distinguere diverse famiglie di attacchi,
 
-- integrazione con tecniche di early stopping e logging (TensorBoard).
+integrazione con dashboard cloud e sistemi SIEM.

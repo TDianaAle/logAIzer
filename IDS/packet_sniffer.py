@@ -1,82 +1,162 @@
-
-
-import scapy.all as scapy
-import pandas as pd
-import joblib
 import time
+import csv
+import joblib
+import pandas as pd
+from collections import defaultdict, deque
+from scapy.all import sniff, TCP, IP, UDP
 
-# === Percorsi ai file salvati ===
+# === Parametri ===
 MODEL_PATH = "./reports/random_forest_model.joblib"
 SCALER_PATH = "./reports/scaler.joblib"
-FEATURES_FILE = "./reports/feature_importance.csv"
+ENCODERS_PATH = "./reports/encoders.joblib"
+CSV_PATH = "./reports/captured_packets.csv"
+INTERFACE = None     # None = interfaccia di default
+DURATION = 60        # secondi di cattura
+WINDOW_SIZE = 500    # pacchetti recenti per feature aggregate
 
-# === Caricamento modello e scaler ===
+# === Caricamento modello e preprocessing ===
+print("[INFO] Caricamento modello e preprocessing...")
 model = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
+encoders = joblib.load(ENCODERS_PATH)
 
-# === Costruzione DataFrame con feature attese ===
-def build_feature_dataframe(packet_features: dict):
-    """
-    Costruisce un DataFrame con tutte le feature attese dal modello.
-    Riempie con 0 quelle non disponibili dallo sniffer.
-    """
-    feat_df = pd.read_csv(FEATURES_FILE)
-    selected_features = feat_df.head(20)["feature"].tolist()
+# === Lista feature nell'ordine corretto ===
+FEATURES = [
+    "src_bytes","dst_bytes","same_srv_rate","dst_host_srv_count",
+    "dst_host_same_srv_rate","flag","logged_in","diff_srv_rate",
+    "protocol_type","count","srv_serror_rate","dst_host_diff_srv_rate",
+    "service","dst_host_same_src_port_rate","serror_rate",
+    "dst_host_srv_diff_host_rate","srv_count","dst_host_rerror_rate",
+    "dst_host_count","dst_host_serror_rate"
+]
 
-    # inizializza tutte le feature a 0
-    complete_features = {f: 0 for f in selected_features}
+# === Stato per feature aggregate ===
+connection_stats = defaultdict(lambda: {"src_bytes":0, "dst_bytes":0})
+recent_packets = deque(maxlen=WINDOW_SIZE)
 
-    # aggiorna con i valori raccolti dal pacchetto
-    for k, v in packet_features.items():
-        if k in complete_features:
-            complete_features[k] = v
+# === Mapping TCP flags ( trasforma flag di Scapy nelle categorie del dataset NSL-KDD) ===
+FLAG_MAPPING = {
+    "S": "S0", "SA": "S1",
+    "A": "SF", "PA": "SF", "FA": "SF",
+    "R": "REJ", "RA": "RSTR",
+    "FPA": "SF", "": "SF"
+}
 
-    return pd.DataFrame([complete_features])
-
-
-# === Funzione di analisi pacchetto ===
-def process_packet(packet):
+# === Funzione per calcolare feature ===
+def extract_features(pkt):
     try:
-        # estrae alcune feature di base dal pacchetto
-        packet_features = {
-            "src_bytes": len(packet.payload) if hasattr(packet, "payload") else 0,
-            "dst_bytes": len(packet) - len(packet.payload) if hasattr(packet, "payload") else len(packet),
-            "protocol_type": packet.proto if hasattr(packet, "proto") else 0,
-            "service": packet.dport if hasattr(packet, "dport") else 0,
-            "flag": 1, 
-            "count": 1,
-            "srv_count": 1,
-            "same_srv_rate": 0.0,
-            "diff_srv_rate": 0.0,
+        src = pkt[IP].src
+        dst = pkt[IP].dst
+        sport = pkt.sport
+        dport = pkt.dport
+        length = len(pkt)
+
+        conn_key = (src, dst, sport, dport)
+        connection_stats[conn_key]["src_bytes"] += length
+        connection_stats[conn_key]["dst_bytes"] += 0  # semplificazione
+
+        if pkt.haslayer(TCP):
+            raw_flag = str(pkt[TCP].flags)
+            mapped_flag = FLAG_MAPPING.get(raw_flag, "SF")
+            proto = "tcp"
+        else:
+            mapped_flag = "SF"  # default per UDP
+            proto = "udp"
+
+        recent_packets.append({
+            "src": src, "dst": dst, "sport": sport, "dport": dport,
+            "len": length, "proto": proto, "flag": mapped_flag
+        })
+
+        features = {
+            "src_bytes": connection_stats[conn_key]["src_bytes"],
+            "dst_bytes": connection_stats[conn_key]["dst_bytes"],
+            "same_srv_rate": sum(1 for p in recent_packets if p["dport"]==dport)/len(recent_packets),
+            "dst_host_srv_count": sum(1 for p in recent_packets if p["dst"]==dst and p["dport"]==dport),
+            "dst_host_same_srv_rate": sum(1 for p in recent_packets if p["dst"]==dst and p["dport"]==dport)/max(1,sum(1 for p in recent_packets if p["dst"]==dst)),
+            "flag": mapped_flag,
+            "logged_in": 0,
+            "diff_srv_rate": sum(1 for p in recent_packets if p["dport"]!=dport)/len(recent_packets),
+            "protocol_type": proto,
+            "count": len([p for p in recent_packets if p["src"]==src]),
+            "srv_serror_rate": 0.0,
+            "dst_host_diff_srv_rate": sum(1 for p in recent_packets if p["dst"]==dst and p["dport"]!=dport)/max(1,sum(1 for p in recent_packets if p["dst"]==dst)),
+            "service": str(dport),
+            "dst_host_same_src_port_rate": sum(1 for p in recent_packets if p["dst"]==dst and p["sport"]==sport)/max(1,sum(1 for p in recent_packets if p["dst"]==dst)),
+            "serror_rate": 0.0,
+            "dst_host_srv_diff_host_rate": sum(1 for p in recent_packets if p["dport"]==dport and p["dst"]!=dst)/max(1,sum(1 for p in recent_packets if p["dport"]==dport)),
+            "srv_count": sum(1 for p in recent_packets if p["dport"]==dport),
+            "dst_host_rerror_rate": 0.0,
+            "dst_host_count": sum(1 for p in recent_packets if p["dst"]==dst),
+            "dst_host_serror_rate": 0.0
         }
 
-        # costruisce dataframe completo
-        df = build_feature_dataframe(packet_features)
+        return features, src, dst, sport, dport
 
-        # scaling
-        X = scaler.transform(df)
+    except Exception:
+        return None, None, None, None, None
 
-        # predizione
-        prediction = model.predict(X)[0]
+# === Preprocessing feature vector ===
+def preprocess(features):
+    row = []
+    for f in FEATURES:
+        val = features[f]
+        if f in ["protocol_type", "service", "flag"]:
+            enc = encoders[f]
+            if hasattr(enc, "transform"):
+                try:
+                    val = enc.transform([val])[0]
+                except ValueError:
+                    val = -1
+            elif isinstance(enc, dict):
+                val = enc.get(val, -1)
+        row.append(val)
 
-        if prediction == 1:
-            print("[ALERT]  Intrusione rilevata!")
-        else:
-            print("[OK]  Traffico normale")
+    row_df = pd.DataFrame([row], columns=FEATURES)
+    row_scaled = scaler.transform(row_df)
+    return row_scaled, row_df.iloc[0].to_dict()
+
+# === Callback sniffer ===
+def process_packet(pkt):
+    if not pkt.haslayer(IP):
+        return
+
+    features, src, dst, sport, dport = extract_features(pkt)
+    if features is None:
+        return
+
+    try:
+        feat_vector, feat_dict = preprocess(features)
+        prediction = model.predict(feat_vector)[0]
+        prob = model.predict_proba(feat_vector)[0][1]
+        label = "normal" if prediction == 0 else "possibile attacco rilevato"
+
+        # regola euristica extra per flood
+        if feat_dict["srv_count"] > 50 or feat_dict["count"] > 100:
+            label = "possibile attacco rilevato (euristica)"
+
+        print(f"[{time.strftime('%H:%M:%S')}] {src}:{sport} -> {dst}:{dport} | {label} | prob={prob:.2f}")
+
+        with open(CSV_PATH, "a", newline="") as f:
+            writer = csv.writer(f)
+            row = [time.strftime("%Y-%m-%d %H:%M:%S"), src, dst, sport, dport]
+            row.extend([feat_dict[f] for f in FEATURES])
+            row.append(label)
+            writer.writerow(row)
 
     except Exception as e:
-        print(f"[ERRORE] durante process_packet: {e}")
+        print(f"[ERRORE] {e}")
 
+# === Main ===
+def main():
+    with open(CSV_PATH, "w", newline="") as f:
+        writer = csv.writer(f)
+        header = ["timestamp","src","dst","sport","dport"] + FEATURES + ["prediction"]
+        writer.writerow(header)
 
-# === MAIN ===
+    print(f"[INFO] Avvio sniffer per {DURATION} secondi...")
+    sniff(prn=process_packet, filter="tcp or udp", iface=INTERFACE, timeout=DURATION)
+    print(f"[INFO] Sniffing terminato. Report in {CSV_PATH}")
+
 if __name__ == "__main__":
-    print("[INFO] Avvio sniffer per 120 secondi sulla porta 5173...")
-
-    packets = scapy.sniff(
-        iface="\\Device\\NPF_Loopback", 
-        filter="tcp port 5173",
-        prn=process_packet,
-        timeout=120
-    )
-
-    print("[INFO] Sniffing terminato.")
+    main()
