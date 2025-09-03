@@ -7,6 +7,23 @@ L’attività di analisi dati condotta sul dataset **NSL-KDD** ha avuto un dupli
 2. individuare le criticità e le trasformazioni necessarie affinché il dataset possa essere impiegato in modo efficace in modelli di *Machine Learning* per la realizzazione di un sistema di **Intrusion Detection (IDS)**.
 
 ## Documentazione del dataset
+
+NSL-KDD: un dataset per rilevare intrusioni informatiche
+
+Il NSL‑KDD è un dataset creato per superare alcuni limiti del più vecchio KDD '99, come l’eccessiva ridondanza dei record che rendeva meno affidabili i modelli di classificazione 
+
+Viene impiegato per addestrare e testare sistemi di rilevamento delle intrusioni (IDS), distinguendo tra connessioni "normali" e varie tipologie di attacchi: DoS (Denial of Service), Probe (sondaggi della rete), U2R (User-to-Root) e R2L (Remote-to-Local) 
+
+
+Il dataset include più versioni, tra cui:
+
+KDDTrain+ e KDDTest+ (train e test completi),
+
+KDDTrain+_20Percent (20 % del training),
+
+KDDTest‑21, una versione più semplice del test set 
+
+È una risorsa molto diffusa nei progetti di cybersecurity per valutare le performance di modelli di machine learning in scenari simulati, ma con una certa realismo
 Per una descrizione dettagliata della struttura del dataset, delle feature e delle etichette disponibili, 
 si rimanda alla pagina [data/nsl-kdd/index.html](data/nsl-kdd/index.html).
 

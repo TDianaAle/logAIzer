@@ -1,0 +1,21 @@
+Feature,Descrizione
+src_bytes,Numero di byte inviati dalla sorgente verso la destinazione.
+dst_bytes,Numero di byte inviati dalla destinazione alla sorgente.
+same_srv_rate,Percentuale di connessioni verso lo stesso servizio.
+dst_host_srv_count,Numero di connessioni verso lo stesso servizio dell’host di destinazione.
+dst_host_same_srv_rate,Percentuale di connessioni all’host di destinazione con lo stesso servizio.
+flag,"Stato della connessione TCP (es. SF = successful, REJ = rejected)."
+protocol_type,"Tipo di protocollo usato (tcp, udp, icmp)."
+service,"Servizio di rete richiesto (http, ftp, telnet, ecc.)."
+count,Numero di connessioni negli ultimi 2 secondi verso lo stesso host.
+srv_count,Numero di connessioni negli ultimi 2 secondi verso lo stesso servizio.
+serror_rate,Percentuale di connessioni con errori di SYN verso l’host.
+srv_serror_rate,Percentuale di connessioni con errori di SYN verso lo stesso servizio.
+dst_host_count,Numero di connessioni verso l’host di destinazione.
+dst_host_same_src_port_rate,Percentuale di connessioni con la stessa porta sorgente verso l’host di destinazione.
+dst_host_srv_diff_host_rate,Percentuale di connessioni verso servizi diversi ma nello stesso host di destinazione.
+dst_host_rerror_rate,Percentuale di connessioni verso l’host di destinazione che hanno errori di REJ.
+dst_host_srv_serror_rate,Percentuale di connessioni verso l’host dest con errori SYN per lo stesso servizio.
+dst_host_diff_srv_rate,Percentuale di connessioni verso l’host dest che usano servizi diversi.
+dst_host_srv_rerror_rate,Percentuale di connessioni verso l’host dest che hanno errori REJ per lo stesso servizio.
+land,Indica se la connessione ha stesso host e porta sorgente/destinazione (attacco LAND).
