@@ -15,12 +15,12 @@ config_schema.json # Schema JSON per validazione
 reports/ # Output di metriche, modelli e confusion matrix
 
 
-## 🚀 Come avviare l’IDS
+## Come avviare l’IDS
 
 Il progetto è strutturato in due fasi principali:
 
 1. **Preparazione e training del modello** (offline, con i file in `src/` e il dataset NSL-KDD).  
-2. **Rilevamento in tempo reale** (online, con `packet_sniffer.py`).  
+2. **Rilevamento in tempo reale** (online, con `IDS/packet_sniffer.py`).  
 
 ---
 
@@ -42,10 +42,10 @@ Questa fase si svolge in due ambienti:
     Applica la selezione delle feature (basata su Random Forest) e salva il ranking in `reports/feature_importance.csv`.
 
   - `models.py`  
-    Definisce i modelli ML (es. Random Forest, Logistic Regression).
+    Definisce i modelli ML ( Random Forest, Logistic Regression).
 
   - `train.py`  
-    Script principale di training.  
+    Script principale di training: 
     - Carica i dati dal `dataloader`.  
     - Applica encoding e scaling.  
     - Addestra i modelli definiti in `models.py`.  
@@ -82,12 +82,12 @@ Al fine di adattare il dataset all’obiettivo primario di un IDS, ovvero la dis
 - `0 = normal`,  
 - `1 = attack`.  
 
-Tale scelta risponde alla necessità didattica di semplificare la pipeline di training e garantire risultati chiari nella fase di dimostrazione.
+Tale scelta risponde alla necessità di semplificare la pipeline di training e garantire risultati chiari nella fase di dimostrazione.
 
 ---
 
-## 3. Preprocessing dei dati
-### 3.1 Encoding delle variabili categoriche
+## Preprocessing dei dati
+### Encoding delle variabili categoriche
 Le variabili `protocol_type`, `service` e `flag` sono state trattate con **Label Encoding**, trasformandole da stringhe a rappresentazioni numeriche poiché il Random Forest non richiede feature numeriche scalate su range specifici, ma necessita di un mapping consistente tra training e runtime.  
 Per garantire consistenza, gli encoder addestrati sono stati **serializzati in un file unico (`encoders.joblib`)**, in modo da poter essere riutilizzati in fase di sniffing in tempo reale.
 

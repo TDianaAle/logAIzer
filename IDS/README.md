@@ -42,7 +42,6 @@ Per queste variabili, nello script vengono utilizzati valori placeholder (`0.0`)
 3. mostra concretamente il **gap tra dataset simulati e traffico reale**.
 
 ---
- Questa architettura permette di applicare il modello addestrato offline al traffico osservato in tempo reale, realizzando un IDS funzionante in ambiente di laboratorio.
 
 ## DEMO
 Per la dimostrazione pratica dell’IDS è stato scritto uno script che simula traffico anomalo e il sistema IDS lo intercetta in tempo reale:
@@ -55,7 +54,25 @@ Per la dimostrazione pratica dell’IDS è stato scritto uno script che simula t
 ⚠️ ATTENZIONE⚠️
 Lo script non destabilizzerà il traffico, l'IDS lo riconosce grazie ad una regola euristica impostata es. Attack solo > 20 req/s.
 
----
+## come avviarlo
+
+aprire tre terminali diversi:
+
+- nel primo avviare il comando per aprire un server in localhost 
+```python
+cd IDS
+python -m http.server 8000
+```
+- nel secondo terminale avviare packet_sniffer.py
+```python
+cd IDS
+python packet_sniffer.py
+```
+- infine, nel terzo terminale avviare evil_script.py
+```
+cd IDS
+python evil_script.py
+```
 
 ## 7. Analisi e visualizzazione
 È stato sviluppato lo script `captured_packet_analyzer.py`, che elabora i log generati (`captured_packets.csv`) e produce grafici descrittivi:  
@@ -66,13 +83,6 @@ Lo script non destabilizzerà il traffico, l'IDS lo riconosce grazie ad una rego
 
 ### Conclusioni
 - **necessità di consistenza nel preprocessing**: encoder e scaler del training sono stati riutilizzati in runtime.  
-- **gap tra dataset simulati e traffico reale**: non tutte le feature sono direttamente calcolabili → introduzione di euristiche.  
-- approccio **ibrido (ML + rule-based)**, in linea con le tendenze moderne in IDS.  
-- il dataset NSL-KDD, pur utile in ambito accademico, non riflette fedelmente la complessità del traffico moderno.  
-- alcune feature sono state sostituite con proxy o placeholder, riducendo la fedeltà.  
--**estensioni possibili** 
-- implementazione di una pipeline completa con **SIEM** o dashboard interattiva.  
-- estensione della classificazione da binaria a multiclasse, per distinguere tipologie di attacco.  
-- introduzione di tecniche di **Deep Learning** (es. LSTM per analisi sequenziale).  
+- **gap tra dataset simulati e traffico reale**: non tutte le feature sono direttamente calcolabili per cui necessaria introduzione di euristiche.  
 
 ---
