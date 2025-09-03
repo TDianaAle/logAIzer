@@ -53,8 +53,7 @@ Per la dimostrazione pratica dell’IDS è stato scritto uno script che simula t
 - Effetto: incremento rapido di `srv_count` e `same_srv_rate`, tipico di un brute-force o attacco DoS.
 
 ⚠️ ATTENZIONE⚠️
-Lo script deve essere testato
- ️️**esclusivamente su macchine di test controllate**, poiché genera traffico potenzialmente destabilizzante.
+Lo script non destabilizzerà il traffico, l'IDS lo riconosce grazie ad una regola euristica impostata es. Attack solo > 20 req/s.
 
 ---
 
