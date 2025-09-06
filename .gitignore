@@ -27,3 +27,6 @@ webapp/
 # === IDE / Editor ===
 .vscode/
 .idea/
+
+# TensorBoard logs
+runs/
