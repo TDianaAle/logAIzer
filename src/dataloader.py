@@ -1,6 +1,7 @@
 # src/dataloader.py
 import pandas as pd
 import joblib
+import os
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 def load_data(train_path, test_path, binary=True, features_file=None, top_k=None):
@@ -24,7 +25,7 @@ def load_data(train_path, test_path, binary=True, features_file=None, top_k=None
     train = pd.read_csv(train_path, names=columns)
     test = pd.read_csv(test_path, names=columns)
 
-    # Etichetta binaria o multiclass
+    # Etichetta binaria anziché multiclass
     if binary:
         train["binary_label"] = train["label"].apply(lambda x: 0 if x == "normal" else 1)
         test["binary_label"] = test["label"].apply(lambda x: 0 if x == "normal" else 1)
@@ -40,7 +41,7 @@ def load_data(train_path, test_path, binary=True, features_file=None, top_k=None
         test[col] = le.transform(test[col])
         encoders[col] = le
 
-    # Selezione feature importanti se specificato
+    # Selezione feature più importanti
     selected_features = None
     if features_file is not None:
         feat_df = pd.read_csv(features_file)
@@ -65,17 +66,20 @@ def load_data(train_path, test_path, binary=True, features_file=None, top_k=None
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
 
-    # Salvataggio di encoder e scaler per l'inference
-    joblib.dump(encoders, "reports/encoders.joblib")
-    joblib.dump(scaler, "reports/scaler.joblib")
+    # === Salvataggio encoder e scaler per l'inference ===
+    REPORTS_DIR = "../reports"
+    os.makedirs(REPORTS_DIR, exist_ok=True)
+
+    joblib.dump(encoders, os.path.join(REPORTS_DIR, "encoders.joblib"))
+    joblib.dump(scaler, os.path.join(REPORTS_DIR, "scaler.joblib"))
 
     return X_train, y_train, X_test, y_test
 
 
 def preprocess_sample(
     sample,
-    encoder_path="reports/encoders.joblib",
-    scaler_path="reports/scaler.joblib",
+    encoder_path="../reports/encoders.joblib",
+    scaler_path="../reports/scaler.joblib",
     features=None
 ):
     """

@@ -1,0 +1,20 @@
+name: logaizer
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.11
+  - fastapi
+  - uvicorn
+  - pandas
+  - scikit-learn
+  - joblib
+  - libpcap
+  - scapy
+  - requests
+  - pydantic
+  - pytorch
+  - numpy
+  - matplotlib
+  - seaborn
+  - tensorboard

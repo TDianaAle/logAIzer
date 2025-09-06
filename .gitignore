@@ -1,0 +1,29 @@
+# === Python base ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.log
+
+# === Jupyter Notebook ===
+.ipynb_checkpoints/
+
+# === Ambiente / pacchetti ===
+.env
+.venv/
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# === Docker & servizi paralleli (non ancora da committare) ===
+docker/
+dashboard/
+agent/
+webapp/
+
+# === IDE / Editor ===
+.vscode/
+.idea/
