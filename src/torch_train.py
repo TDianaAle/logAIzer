@@ -1,3 +1,4 @@
+# src/torch_train.py
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,11 +11,11 @@ import os
 from dataloader import load_data
 from torch_models import MLPClassifier
 
-#config
+# === CONFIGURAZIONE ===
 TRAIN_PATH = "./data/nsl-kdd/KDDTrain+.txt"
 TEST_PATH = "./data/nsl-kdd/KDDTest+.txt"
 FEATURES_FILE = "./reports/feature_importance.csv"
-TOP_K = 20
+TOP_K = 8   # selezionate solo le 8 feature piu rilevanti
 
 BATCH_SIZE = 64
 EPOCHS = 50
@@ -23,7 +24,7 @@ PATIENCE = 5  # early stopping
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-#carica dati
+# === CARICAMENTO DATI ===
 print("[INFO] Caricamento dataset...")
 X_train, y_train, X_test, y_test = load_data(
     train_path=TRAIN_PATH,
@@ -34,7 +35,7 @@ X_train, y_train, X_test, y_test = load_data(
 )
 
 input_dim = X_train.shape[1]
-print(f"[INFO] Numero di feature usate: {input_dim}")
+print(f"[INFO] Numero di feature usate per il training: {input_dim}")
 
 # Conversione in tensori
 X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
@@ -49,7 +50,7 @@ test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 val_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-#modello, loss e optimizer
+# === MODELLO, LOSS E OPTIMIZER ===
 model = MLPClassifier(input_dim=input_dim).to(DEVICE)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -57,7 +58,10 @@ optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 # TensorBoard
 writer = SummaryWriter(log_dir="./runs/ids_experiment")
 
-#trainning loop
+print("[INFO] Inizio training MLPClassifier...")
+print(model)
+
+# === TRAINING LOOP ===
 best_val_loss = float("inf")
 patience_counter = 0
 
@@ -78,7 +82,7 @@ for epoch in range(EPOCHS):
 
     avg_train_loss = np.mean(train_losses)
 
-#validation
+    # === VALIDAZIONE ===
     model.eval()
     val_losses = []
     correct, total = 0, 0
@@ -107,15 +111,13 @@ for epoch in range(EPOCHS):
     writer.add_scalar("Loss/val", avg_val_loss, epoch)
     writer.add_scalar("Accuracy/val", val_accuracy, epoch)
 
-
-    # Salvataggio modello
-
+    # === SALVATAGGIO MODELLO ===
     torch.save(model.state_dict(), "./reports/model_last.pth")
 
     if avg_val_loss < best_val_loss:
         best_val_loss = avg_val_loss
         torch.save(model.state_dict(), "./reports/model_best.pth")
-        print("[INFO] Miglior modello salvato")
+        print("[INFO] → Miglior modello salvato.")
         patience_counter = 0
     else:
         patience_counter += 1

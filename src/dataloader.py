@@ -1,12 +1,13 @@
 # src/dataloader.py
-import pandas as pd
-import joblib
 import os
+import joblib
+import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-def load_data(train_path, test_path, binary=True, features_file=None, top_k=None):
+def load_data(train_path, test_path, binary=True, features_file="../reports/feature_importance.csv", top_k=8):
     """
-    Carica e preprocessa il dataset NSL-KDD.
+    Carica e preprocessa il dataset NSL-KDD, selezionando solo le top-k feature (default: 8).
     """
     # Nomi delle colonne NSL-KDD
     columns = [
@@ -41,23 +42,13 @@ def load_data(train_path, test_path, binary=True, features_file=None, top_k=None
         test[col] = le.transform(test[col])
         encoders[col] = le
 
-    # Selezione feature più importanti
-    selected_features = None
-    if features_file is not None:
-        feat_df = pd.read_csv(features_file)
-        if top_k is not None:
-            selected_features = feat_df.head(top_k)["feature"].tolist()
-        else:
-            selected_features = feat_df["feature"].tolist()
+    # Carica top-k feature dall’EDA
+    feat_df = pd.read_csv(features_file)
+    selected_features = feat_df.head(top_k)["feature"].tolist()
 
-    drop_cols = ["label", "difficulty", target]
-    X_train = train.drop(columns=drop_cols)
-    X_test = test.drop(columns=drop_cols)
-
-    if selected_features:
-        X_train = X_train[selected_features]
-        X_test = X_test[selected_features]
-
+    # Seleziona solo le top-k feature
+    X_train = train[selected_features]
+    X_test = test[selected_features]
     y_train = train[target]
     y_test = test[target]
 
@@ -69,7 +60,6 @@ def load_data(train_path, test_path, binary=True, features_file=None, top_k=None
     # === Salvataggio encoder e scaler per l'inference ===
     REPORTS_DIR = "../reports"
     os.makedirs(REPORTS_DIR, exist_ok=True)
-
     joblib.dump(encoders, os.path.join(REPORTS_DIR, "encoders.joblib"))
     joblib.dump(scaler, os.path.join(REPORTS_DIR, "scaler.joblib"))
 
@@ -101,3 +91,32 @@ def preprocess_sample(
 
     X = scaler.transform(df)
     return X
+
+
+if __name__ == "__main__":
+    TRAIN_PATH = "./data/nsl-kdd/KDDTrain+.txt"
+    TEST_PATH = "./data/nsl-kdd/KDDTest+.txt"
+    FEATURES_FILE = "./reports/feature_importance.csv"
+    TOP_K = 8  #sempre le top 8
+
+    print("[INFO] Loading dataset...")
+    X_train, y_train, X_test, y_test = load_data(
+        train_path=TRAIN_PATH,
+        test_path=TEST_PATH,
+        binary=True,
+        features_file=FEATURES_FILE,
+        top_k=TOP_K
+    )
+
+    print("[INFO] Dataset loaded successfully!")
+    print(f" - Training set shape: {X_train.shape}, Labels: {y_train.shape}")
+    print(f" - Test set shape:     {X_test.shape}, Labels: {y_test.shape}")
+    print(f" - Example labels distribution (train):\n{y_train.value_counts().head()}")
+
+    # Grafico distribuzione classi
+    plt.figure(figsize=(5,4))
+    y_train.value_counts().plot(kind="bar")
+    plt.title("Distribuzione classi nel training set")
+    plt.xlabel("Classe (0=normal, 1=attack)")
+    plt.ylabel("Numero campioni")
+    plt.show()

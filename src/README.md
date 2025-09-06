@@ -1,124 +1,190 @@
-## logAIzer – Modulo Artificial Intelligence & Machine Learning
+## logAIzer – Modulo AI & ML
 
+Avvio:
+1. Installare le dipendenze:
+```python
+pip install -r requirements.txt
+```
+
+oppure creare l’ambiente Conda:
+```python
+conda env create -f environment.yaml
+conda activate logaizer
+```
+2. Addestrare il modello:
+```python
+python src/torch_train.py
+```
+3. Eseguire l’inferenza su un campione:
+```python
+python src/inference_torch.py
+```
+---
 # Introduzione e Obiettivo
 
 Il modulo di Machine Learning di logAIzer implementa una pipeline completa per l’addestramento, la valutazione e l’inferenza di modelli di classificazione sul dataset NSL-KDD, con l’obiettivo di sviluppare un Intrusion Detection System (IDS) in grado di distinguere traffico di rete legittimo da potenziale traffico anomalo.
 
-La progettazione si fonda sui risultati della fase di Analisi Dati (EDA), che ha permesso di evidenziare criticità del dataset (squilibrio di classe, ridondanza di variabili, necessità di encoding e normalizzazione).
+La progettazione si fonda sui risultati della fase di Analisi Dati (EDA), che ha permesso di evidenziare criticità del dataset (squilibrio di classe, ridondanza di variabili, necessità di encoding e normalizzazione). In questa fase è stata condotta anche una feature selection basata su Random Forest, che ha permesso di ordinare le variabili per importanza predittiva.
 
+Sulla base di questi risultati, per l’addestramento finale è stato scelto di utilizzare le 8 feature più rilevanti, poiché hanno mostrato di spiegare la maggior parte della capacità discriminante del dataset e possono essere calcolate in tempo reale durante il monitoraggio della rete.
 
-Il training è stato condotto utilizzando un sottoinsieme delle feature più informative, selezionate in base alla loro rilevanza, con un’attenzione particolare a quelle che possono essere calcolate e osservate in tempo reale durante il monitoraggio della rete.
-In particolare, il modello è stato addestrato su variabili in grado di catturare fenomeni caratteristici di tre famiglie di attacco comuni:
+---
+# Attacchi e feature rilevanti
 
-- Probe (port scanning, es. scansioni con Nmap o Nuclei)
-Questi attacchi si distinguono perché generano un numero elevato di connessioni brevi e ripetute verso host o porte diverse.
+Il modello è stato addestrato concentrandosi su variabili capaci di catturare fenomeni caratteristici di tre famiglie di attacco comuni:
 
+- Probe (port scanning, es. Nmap o Nuclei)
+Attacchi che generano numerose connessioni brevi e ripetute verso host o porte diverse.
 Feature chiave: count, srv_count, diff_srv_rate, dst_host_srv_count, same_srv_rate.
+→ Un probe produce valori anomali di varietà elevata, con molte richieste diverse in poco tempo.
 
-Queste variabili descrivono quante connessioni recenti sono state fatte verso lo stesso host o servizio e con quale varietà.
-
-Un probe produce tipicamente valori anomali di varietà elevata (molti servizi diversi in poco tempo).
-
-- Brute forcing (es. tentativi ripetuti di login)
-Qui il tratto distintivo è l’elevato numero di connessioni fallite in breve tempo verso un servizio di autenticazione.
-
+- Brute forcing (tentativi ripetuti di login)
+Riconoscibili per l’alto numero di connessioni fallite verso un servizio di autenticazione.
 Feature chiave: num_failed_logins, logged_in, hot.
-
-Un brute force genera una sequenza di tentativi con num_failed_logins elevato e stato logged_in=0.
-
-Il modello impara che questa combinazione è fortemente associata a traffico malevolo.
+→ Una sequenza di tentativi falliti con num_failed_logins alto e logged_in=0 è tipicamente malevola.
 
 - TCP Flood (es. SYN flood, traffico DoS)
-Si tratta di attacchi basati su grandi volumi di pacchetti inviati in rapida successione, spesso incompleti o con flag sospetti.
-
+Basati su volumi elevati di pacchetti inviati rapidamente, spesso incompleti o con flag sospetti.
 Feature chiave: src_bytes, dst_bytes, serror_rate, srv_serror_rate, dst_host_serror_rate.
+→ Un flood si riconosce da sbilanciamenti estremi nei byte inviati/ricevuti e da tassi di errore vicini a 1.
+---
+# Come riesce il modello a riconoscerli?
+# Architettura scelta: Multilayer Perceptron (MLP)
 
-Un flood si riconosce perché i byte inviati/ricevuti sono molto sbilanciati e i tassi di errore (serror_rate) si avvicinano a 1.
+Il modello utilizza come architettura una rete neurale Multilayer Perceptron (MLP) che riceve in input i valori numerici delle feature selezionate.
+Durante il training, la rete viene esposta a migliaia di esempi di traffico normale e attacchi: a ogni epoca, i pesi interni vengono aggiornati per ridurre la loss di classificazione.
 
-Il modello sfrutta queste anomalie per distinguere un flood dal traffico legittimo.
+In questo modo, l’MLP non applica regole scritte a mano, ma costruisce internamente rappresentazioni non lineari che separano lo spazio dei dati “normali” da quello “anomalo”.
+Le feature scelte catturano i segnali operativi chiave (frequenza, varietà, volumi, errori), rendendo possibile questa separazione.
 
-## Come riesce il modello a riconoscerli?
+Input layer: dimensione pari al numero di feature selezionate.
 
-Il modello utilizzato è una rete neurale multilayer perceptron (MLP) che riceve in input i valori numerici delle feature selezionate.
+Hidden layers: fully connected con attivazioni ReLU, per apprendere relazioni non lineari.
 
-Durante il training, la rete “vede” migliaia di esempi di traffico normale e attacchi (descritti sopra)
+Output layer: 2 neuroni con softmax per classificare normal vs attack.
 
-Ogni epoca di addestramento aggiorna i pesi della rete in modo da ridurre la loss di classificazione e col tempo, la rete impara pattern ricorrenti.
+**La scelta delle dimensioni è stata fatta per mantenere un buon compromesso tra capacità predittiva ed efficienza computazionale, requisito fondamentale in uno scenario IDS real-time.**
 
-In pratica, il modello non ha una regola scritta a mano(euristica), ma costruisce internamente rappresentazioni non lineari che separano bene lo spazio dei dati “normali” da quello “anomalo”.
-Questo è possibile perché le feature scelte catturano proprio le caratteristiche operative degli attacchi: frequenza, varietà, volumi, errori.
+L’MLP è stato implementato in **src/torch_models.py** (classe MLPClassifier) e addestrato in **src/torch_train.py** con ottimizzatore Adam, loss function CrossEntropyLoss, DataLoader per batch ed early stopping.
 
-## Architettura scelta: Multilayer Perceptron (MLP)
+Il modello migliore viene salvato in **reports/model_best.pth** e utilizzato in **src/inference_torch.py**, dove la funzione predict(sample) restituisce la classe del traffico preprocessato.
 
-Il progetto utilizza un MLP, rete neurale feed-forward adatta a dati tabellari come quelli del dataset scelto. L’architettura prevede:
+---
 
-- Input layer con dimensione pari al numero di feature selezionate.
-
-- Hidden layers fully connected con attivazioni ReLU, per apprendere relazioni non lineari; 
-- Output layer con 2 neuroni e softmax per classificare normal vs attack.
-
-**la scelta dei layer hidden e della dimensione dei neuroni è stata fatta per mantenere un buon compromesso tra capacità predittiva e leggerezza computazionale, poiché il sistema deve funzionare in tempo reale**
-
-L’MLP è stato implementato nel file **src/torch_models.py** tramite la classe MLPClassifier e addestrato in **src/torch_train.py** usando Adam, CrossEntropyLoss, DataLoader per batch e early stopping.
-
-**MLP minimizza la CrossEntropyLoss e che le rappresentazioni apprese nello spazio latente permettono di separare regioni di decisione tra traffico normale e anomalo**.
-
-Il modello migliore viene salvato in **../reports/model_best.pth** e utilizzato in **src/inference_torch.py** dalla funzione predict(sample), che restituisce la classe del traffico preprocessato.
-
-La scelta dell’MLP è motivata dalla natura tabellare e ibrida (numerico + categorico) dei dati, dall’esigenza di un modello leggero ed efficiente in tempo reale, e dalla sua capacità di catturare pattern non lineari tipici di attacchi come probe, brute force e DoS flood.
-
-## moduli
-
-# src/
+ # Moduli
 
 **dataloader.py**
 
-- Carica il dataset NSL-KDD e assegna manualmente i nomi delle colonne.
+- In questo caso non carica più il dataset completo ma solo le top 8 features selezionate dopo la fase di feature importance nell'EDA, assegnando manualmente i nomi delle colonne.
+ - Converte la label multiclass in una variabile binaria (normal=0, attack=1).
+  - Applica Label Encoding alle variabili categoriche (protocol_type, service, flag), salvando gli encoder in **../reports/encoders.joblib** per garantire consistenza in fase di inferenza. 
+  - Normalizza le feature numeriche con StandardScaler, salvato in **../reports/scaler.joblib**. 
+  - Restituisce X_train, y_train, X_test, y_test pronti per l’addestramento. 
 
-- Converte la label multiclass in una variabile binaria (normal=0, attack=1).
-
-- Applica Label Encoding alle variabili categoriche (protocol_type, service,    flag), salvando gli encoder in **../reports/encoders.joblib** per garantire consistenza in fase di inferenza.
-
-- Normalizza le feature numeriche con StandardScaler, salvato in **../reports/scaler.joblib**.
-
-- Restituisce X_train, y_train, X_test, y_test pronti per l’addestramento.
-
-**feature_selection.py**
-
-- Applica un Random Forest Classifier per calcolare l’importanza delle variabili.
-
-- Produce un file **../reports/feature_importance.csv** che ordina le feature per rilevanza.
-
-- Consente di addestrare i modelli solo sulle top-k variabili, riducendo la dimensionalità senza sacrificare accuratezza.
+---
 
 **torch_models.py**
 
-- Definisce l’architettura di un Multilayer Perceptron (MLP) con PyTorch.
+ Funzione che riceve in ingresso un vettore di 8 feature numeriche, selezionate come le più rilevanti per la discriminazione normale o attacco.
 
-- L’MLP utilizza layer fully-connected con funzioni di attivazione ReLU e un livello finale di output per la classificazione binaria.
+Ciascun layer nascosto applica una trasformazione lineare seguita da una funzione di attivazione ReLU, che introduce non-linearità e consente di apprendere relazioni complesse tra le variabili.
+I layer successivi raffinano progressivamente queste rappresentazioni, riducendo rumore e amplificando i pattern più significativi per la classificazione.
 
-- Costituisce il cuore predittivo dell’IDS.
+Lo strato di output produce due valori (logit), corrispondenti alle due classi possibili: normal e attack.
+Questi vengono trasformati tramite softmax in una distribuzione di probabilità normalizzata, tale che la somma sia pari a 1.
+
+La decisione finale si ottiene scegliendo la classe con probabilità maggiore, permettendo così al sistema di classificare automaticamente ogni campione di traffico in base alla sua somiglianza con i pattern osservati in fase di addestramento.
+
+---
+
+ # Schema
+
+            Input Layer (8 feature)
+      ┌──────────────────────────────────┐
+      │ duration, src_bytes, dst_bytes,  │
+      │ same_srv_rate, diff_srv_rate,    │
+      │ count, dst_host_srv_count, flag  │
+      └──────────────────────────────────┘
+                       │
+                       ▼
+           Hidden Layer 1 (64 neuroni)
+      ┌──────────────────────────────────┐
+      │ Linear(8 → 64)                   │
+      │ ReLU activation                  │
+      │ Dropout(0.3)                     │
+      └──────────────────────────────────┘
+                       │
+                       ▼
+           Hidden Layer 2 (64 neuroni)
+      ┌──────────────────────────────────┐
+      │ Linear(64 → 64)                  │
+      │ ReLU activation                  │
+      │ Dropout(0.3)                     │
+      └──────────────────────────────────┘
+                       │
+                       ▼
+             Output Layer (2 neuroni)
+      ┌──────────────────────────────────┐
+      │ Linear(64 → 2)                   │
+      │ Softmax → Probabilità            │
+      │  - Classe 0: Normal              │
+      │  - Classe 1: Attack              │
+      └──────────────────────────────────┘
+
+---
 
 **torch_train.py**
 
-- Implementa il ciclo di training della rete neurale.
+Implementa il ciclo di training della rete neurale.
 
-- Gestisce i DataLoader per batch, la loss function (CrossEntropyLoss), l’ottimizzatore (Adam) e il monitoraggio delle metriche.
+Gestisce i DataLoader per batch, la loss function (nn.CrossEntropyLoss), l’ottimizzatore (optim.Adam) e il monitoraggio delle metriche.
 
-- Integra Early Stopping per interrompere l’addestramento in caso di overfitting.
+Integra Early Stopping per interrompere l’addestramento in caso di overfitting.
 
-- Salva il modello migliore in **../reports/model_best.pth** e l’ultimo modello in **../reports/model_last.pth**.
+Salva il modello migliore in ../reports/model_best.pth e l’ultimo modello in ../reports/model_last.pth tramite torch.save.
 
-- Utilizza TensorBoard per registrare loss e accuratezza durante le epoche di training.
+Utilizza TensorBoard (torch.utils.tensorboard.SummaryWriter) per registrare loss e accuratezza durante le epoche di training.
+
+Sfrutta in maniera estesa le classi e le funzioni native di PyTorch, come torch.Tensor, TensorDataset, DataLoader, e i moduli di rete (nn.Module, nn.Linear, nn.ReLU, nn.Dropout) che costituiscono l’ossatura dell’intero processo di training.
+
+-----
+               Dataloader (8 feature selezionate)
+                   │
+                   ▼
+          Train / Test Dataset (X, y)
+                   │
+                   ▼
+        ┌───────────────────────────────┐
+        │   Conversione in Tensori      │
+        │   e DataLoader per batch      │
+        └───────────────────────────────┘
+                   │
+                   ▼
+         ┌────────────────────────────┐
+         │   MLPClassifier (8→64→64→2)│
+         │   Loss: CrossEntropyLoss   │
+         │   Optimizer: Adam          │
+         └────────────────────────────┘
+                   │
+   ┌───────────────┴───────────────┐
+   ▼                               ▼
+Training Loop                Validazione Loop
+(Forward, Backward, Update)  (Calcolo Loss + Accuracy)
+   │                               │
+   └───────────────┬───────────────┘
+                   ▼
+        Early Stopping & Saving
+        - model_last.pth
+        - model_best.pth
+                   │
+                   ▼
+          [INFO] Training completato
+
+---
 
 **inference_torch.py**
 
-- Permette di utilizzare il modello addestrato in fase di rilevamento.
-
-- Carica il file model_best.pth, insieme agli encoder e scaler salvati.
-
-- Espone una funzione predict(sample) che riceve in input un dizionario con tutte le 41 feature originali del dataset e restituisce una predizione binaria (normal o attack).
-
-- Garantisce coerenza totale con il preprocessing applicato durante l’addestramento.
-
-
+- Permette di utilizzare il modello addestrato in fase di rilevamento. 
+- Carica il file model_best.pth, insieme agli encoder e scaler salvati. 
+- Espone una funzione predict(sample) che riceve in input un dizionario con le 8 feature originali selezionate in precedenza e restituisce una predizione binaria.
+----
