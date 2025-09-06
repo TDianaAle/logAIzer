@@ -1,0 +1,27 @@
+{
+    "data": {
+        "train_path": "data/nsl-kdd/KDDTrain+.TXT",
+        "test_path": "data/nsl-kdd/KDDTest+.TXT",
+        "binary": true,
+        "features_file": "reports/feature_importance.csv",
+        "top_k": 20
+    },
+    "models": {
+        "logistic_regression": {
+        "enabled": false, 
+        "max_iter": 1000,
+        "class_weight": "balanced",
+        "solver": "lbfgs",
+        "random_state": 42
+        },
+        "random_forest": {
+        "enabled": true,
+        "n_estimators": 200,
+        "class_weight": "balanced",
+        "random_state": 42
+        }
+    },
+    "output": {
+        "reports_dir": "reports/"
+    }
+}

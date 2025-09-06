@@ -30,3 +30,11 @@ webapp/
 
 # TensorBoard logs
 runs/IDS/
+
+# Ignora cartelle non necessarie
+IDS/
+cloud/
+runs/
+
+# Ignora file di compose temporaneo
+docker-compose.yml
