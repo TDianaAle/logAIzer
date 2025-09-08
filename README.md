@@ -71,7 +71,7 @@ python -m streamlit run src/fastAPI/ids_dashboard.py
 
 ---
 
-![esempio dashboard](demo.png)
+![esempio dashboard](src/fastAPI/demo.png)
 
 ---
 
