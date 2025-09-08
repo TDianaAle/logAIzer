@@ -56,7 +56,9 @@ reports/model_best.pth
 reports/encoders.joblib
 
 reports/scaler.joblib
+
 ---
+
 Avvio backend
 ```python
 python -m uvicorn src.fastAPI.ids_backend:app --reload --host 127.0.0.1 --port 8000
@@ -66,11 +68,16 @@ In un altro terminale avviare la dashboard:
 ```python
 python -m streamlit run src/fastAPI/ids_dashboard.py
 ```
+
 ---
+
 ![esempio dashboard](demo.png)
+
 ---
+
 Nella dashboard vi è presente una legenda con i valori numerici di ogni feature per poter determinare 3 tipi di attacco e traffico normale. La legenda aiuta a compilare il form, dove si inseriscono i valori di un pacchetto ( seguendo la legenda poiché il modello riconosce quelli).
 
 In seguito il pacchetto viene inviato al backend, che restituisce la predizione (normal o attack) e genera log con la conologia delle predizioni e un grafico con statistiche.
+
  ---
  
