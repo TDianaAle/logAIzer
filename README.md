@@ -2,14 +2,17 @@ LogAIzer – Intrusion Detection System (IDS)
 # Panoramica
 
 Sistema di Intrusion Detection (IDS) basato su Machine Learning, allenato sul dataset NSL-KDD con integrazione un backend con FastAPI e Frontend con Streamlit per facilitare la simulazione.
+
 ---
+
 ℹ️ Nota importante
 
 La simulazione di attacchi è puramente virtuale.
 I pacchetti non vengono trasmessi sulla rete reale, ma inviati come JSON al backend e classificati dal modello ML.
+
 ---
 
-**Per da documentazione completa di ogni fase, fare riferimento ai relativi README.md.**
+**Per la documentazione completa di ogni fase, fare riferimento ai relativi README.md.**
 
 data_analysis/ → esplorazione dati (README.md, analysis.ipynb)
 
