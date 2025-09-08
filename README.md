@@ -8,7 +8,7 @@ Sistema di Intrusion Detection (IDS) basato su Machine Learning, allenato sul da
 La simulazione di attacchi è puramente virtuale.
 I pacchetti non vengono trasmessi sulla rete reale, ma inviati come JSON al backend e classificati dal modello ML.
 ---
- Struttura del progetto
+
 **Per da documentazione completa di ogni fase, fare riferimento ai relativi README.md.**
 
 data_analysis/ → esplorazione dati (README.md, analysis.ipynb)
