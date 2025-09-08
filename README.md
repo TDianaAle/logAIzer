@@ -18,7 +18,7 @@ src/ → codice sorgente (training, modelli, README.md)
 reports/ → risultati, feature importance, modelli, scaler/encoder
 
 src/fastAPI/ → demo finale (backend, dashboard, sqlite db, README.md)
----
+
 Come funziona:
 
 Il nucleo predittivo è costituito da un modello MLPClassifier implementato in PyTorch, addestrato utilizzando le otto feature più rilevanti individuate tramite analisi di importanza.
