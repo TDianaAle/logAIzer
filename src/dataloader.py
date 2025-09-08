@@ -63,7 +63,7 @@ def load_data(train_path, test_path, binary=True, features_file="../reports/feat
     joblib.dump(encoders, os.path.join(REPORTS_DIR, "encoders.joblib"))
     joblib.dump(scaler, os.path.join(REPORTS_DIR, "scaler.joblib"))
 
-    return X_train, y_train, X_test, y_test
+    return X_train, y_train, X_test, y_test, encoders, scaler
 
 
 def preprocess_sample(

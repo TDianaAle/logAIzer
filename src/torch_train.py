@@ -1,5 +1,6 @@
 # src/torch_train.py
 import torch
+import joblib
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
@@ -8,8 +9,8 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import os
 
-from dataloader import load_data
-from torch_models import MLPClassifier
+from .dataloader import load_data
+from .torch_models import MLPClassifier
 
 # === CONFIGURAZIONE ===
 TRAIN_PATH = "./data/nsl-kdd/KDDTrain+.txt"
@@ -26,13 +27,17 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # === CARICAMENTO DATI ===
 print("[INFO] Caricamento dataset...")
-X_train, y_train, X_test, y_test = load_data(
+X_train, y_train, X_test, y_test, encoders, scaler = load_data(
     train_path=TRAIN_PATH,
     test_path=TEST_PATH,
     binary=True,
     features_file=FEATURES_FILE,
     top_k=TOP_K
 )
+REPORTS_DIR = "./reports"
+os.makedirs(REPORTS_DIR, exist_ok=True)
+joblib.dump(encoders, os.path.join(REPORTS_DIR, "encoders.joblib"))
+joblib.dump(scaler, os.path.join(REPORTS_DIR, "scaler.joblib"))
 
 input_dim = X_train.shape[1]
 print(f"[INFO] Numero di feature usate per il training: {input_dim}")

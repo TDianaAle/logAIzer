@@ -76,24 +76,29 @@ Il modello migliore viene salvato in **reports/model_best.pth** e utilizzato in 
 **dataloader.py**
 
 - In questo caso non carica più il dataset completo ma solo le top 8 features selezionate dopo la fase di feature importance nell'EDA, assegnando manualmente i nomi delle colonne.
+
  - Converte la label multiclass in una variabile binaria (normal=0, attack=1).
   - Applica Label Encoding alle variabili categoriche (protocol_type, service, flag), salvando gli encoder in **../reports/encoders.joblib** per garantire consistenza in fase di inferenza. 
+
   - Normalizza le feature numeriche con StandardScaler, salvato in **../reports/scaler.joblib**. 
+  
   - Restituisce X_train, y_train, X_test, y_test pronti per l’addestramento. 
 
 ---
 
 **torch_models.py**
 
- Funzione che riceve in ingresso un vettore di 8 feature numeriche, selezionate come le più rilevanti per la discriminazione normale o attacco.
+-  Funzione che riceve in ingresso un vettore di 8 feature numeriche, selezionate come le più rilevanti per la discriminazione normale o attacco.
 
-Ciascun layer nascosto applica una trasformazione lineare seguita da una funzione di attivazione ReLU, che introduce non-linearità e consente di apprendere relazioni complesse tra le variabili.
-I layer successivi raffinano progressivamente queste rappresentazioni, riducendo rumore e amplificando i pattern più significativi per la classificazione.
+- Ciascun layer nascosto applica una trasformazione lineare seguita da una funzione di attivazione ReLU, che introduce non-linearità e consente di apprendere relazioni complesse tra le variabili.
 
-Lo strato di output produce due valori (logit), corrispondenti alle due classi possibili: normal e attack.
-Questi vengono trasformati tramite softmax in una distribuzione di probabilità normalizzata, tale che la somma sia pari a 1.
+- I layer successivi raffinano progressivamente queste rappresentazioni, riducendo rumore e amplificando i pattern più significativi per la classificazione.
 
-La decisione finale si ottiene scegliendo la classe con probabilità maggiore, permettendo così al sistema di classificare automaticamente ogni campione di traffico in base alla sua somiglianza con i pattern osservati in fase di addestramento.
+- Lo strato di output produce due valori (logit), corrispondenti alle due classi possibili: normal e attack.
+
+- I logit vengono trasformati tramite softmax in una distribuzione di probabilità normalizzata, tale che la somma sia pari a 1.
+
+- La decisione finale si ottiene scegliendo la classe con probabilità maggiore, permettendo così al sistema di classificare automaticamente ogni campione di traffico in base alla sua somiglianza con i pattern osservati in fase di addestramento.
 
 ---
 
@@ -135,17 +140,17 @@ La decisione finale si ottiene scegliendo la classe con probabilità maggiore, p
 
 **torch_train.py**
 
-Implementa il ciclo di training della rete neurale.
+- Implementa il ciclo di training della rete neurale.
 
-Gestisce i DataLoader per batch, la loss function (nn.CrossEntropyLoss), l’ottimizzatore (optim.Adam) e il monitoraggio delle metriche.
+- Gestisce i DataLoader per batch, la loss function (nn.CrossEntropyLoss), l’ottimizzatore (optim.Adam) e il monitoraggio delle metriche.
 
-Integra Early Stopping per interrompere l’addestramento in caso di overfitting.
+- Integra Early Stopping per interrompere l’addestramento in caso di overfitting.
 
-Salva il modello migliore in ../reports/model_best.pth e l’ultimo modello in ../reports/model_last.pth tramite torch.save.
+- Salva il modello migliore in ../reports/model_best.pth e l’ultimo modello in ../reports/model_last.pth tramite torch.save.
 
-Utilizza TensorBoard (torch.utils.tensorboard.SummaryWriter) per registrare loss e accuratezza durante le epoche di training.
+-  TensorBoard (torch.utils.tensorboard.SummaryWriter) per registrare loss e accuratezza durante le epoche di training.
 
-Sfrutta in maniera estesa le classi e le funzioni native di PyTorch, come torch.Tensor, TensorDataset, DataLoader, e i moduli di rete (nn.Module, nn.Linear, nn.ReLU, nn.Dropout) che costituiscono l’ossatura dell’intero processo di training.
+- Sfrutta in maniera estesa le classi e le funzioni native di PyTorch, come torch.Tensor, TensorDataset, DataLoader, e i moduli di rete (nn.Module, nn.Linear, nn.ReLU, nn.Dropout) che costituiscono l’ossatura dell’intero processo di training.
 
 -----
                Dataloader (8 feature selezionate)
@@ -176,9 +181,7 @@ Training Loop                Validazione Loop
         Early Stopping & Saving
         - model_last.pth
         - model_best.pth
-                   │
-                   ▼
-          [INFO] Training completato
+
 
 ---
 

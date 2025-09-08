@@ -35,6 +35,7 @@ runs/IDS/
 IDS/
 cloud/
 runs/
+dashboard-ui/
 
 # Ignora file di compose temporaneo
 docker-compose.yml
